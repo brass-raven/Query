@@ -10,9 +10,10 @@
 - [ ] variables (maybe not needed?)
 - [ ] tanstack table
 - [ ] open a config (like have a yaml file that has the config or that instance of the app and then when you open the app, you can select different "projects" (yaml configs) to load from with locations)
-- [ ] other languages
 - [ ] save & pin queries
 - [ ] quick preview of query results
 - [ ] vim keybindings
+- [ ] autocomplete
+- [ ] other languages
   - mysql
   - mongodb (nosql)
