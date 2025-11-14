@@ -1,4 +1,5 @@
 import { Editor } from '@monaco-editor/react';
+import { useRef, useEffect } from 'react';
 
 interface SqlEditorProps {
   value: string;
@@ -13,17 +14,71 @@ interface SqlEditorProps {
       }>;
     }>;
   } | null;
+  onEditorReady?: (insertAtCursor: (text: string) => void) => void;
 }
 
-export function SqlEditor({ value, onChange, onRunQuery, schema }: SqlEditorProps) {
+export function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady }: SqlEditorProps) {
+  const editorRef = useRef<any>(null);
+  const schemaRef = useRef(schema);
+  const onRunQueryRef = useRef(onRunQuery);
+  const completionProviderRef = useRef<any>(null);
+
+  // Update refs when props change
+  useEffect(() => {
+    schemaRef.current = schema;
+  }, [schema]);
+
+  useEffect(() => {
+    onRunQueryRef.current = onRunQuery;
+  }, [onRunQuery]);
+
+  // Cleanup completion provider on unmount
+  useEffect(() => {
+    return () => {
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+      }
+    };
+  }, []);
+
   function handleEditorChange(newValue: string | undefined) {
     onChange(newValue || '');
   }
 
   function handleEditorMount(editor: any, monaco: any) {
-    // Cmd+Enter to run query
+    // Store editor instance
+    editorRef.current = editor;
+
+    // Provide insert-at-cursor function to parent
+    if (onEditorReady) {
+      const insertAtCursor = (text: string) => {
+        const position = editor.getPosition();
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endColumn: position.column,
+        };
+        editor.executeEdits('', [{
+          range: range,
+          text: text,
+          forceMoveMarkers: true,
+        }]);
+        editor.focus();
+      };
+      onEditorReady(insertAtCursor);
+    }
+
+    // Cmd+Enter to run query (read current editor value and sync state first)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-      onRunQuery();
+      // Get the current value from the editor to ensure we have the latest
+      const currentValue = editor.getValue();
+      // Update the parent state with current editor value
+      onChange(currentValue);
+      // Use setTimeout to ensure state update completes before running query
+      setTimeout(() => {
+        onRunQueryRef.current();
+      }, 0);
     });
 
     // Cmd+/ to comment
@@ -31,8 +86,12 @@ export function SqlEditor({ value, onChange, onRunQuery, schema }: SqlEditorProp
       editor.trigger('keyboard', 'editor.action.commentLine', {});
     });
 
-    // Register completion provider with schema
-    monaco.languages.registerCompletionItemProvider('sql', {
+    // Register completion provider with schema (dispose old one first if exists)
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+    }
+
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider('sql', {
       provideCompletionItems: (model: any, position: any) => {
         const word = model.getWordUntilPosition(position);
         const range = {
@@ -69,9 +128,10 @@ export function SqlEditor({ value, onChange, onRunQuery, schema }: SqlEditorProp
           });
         });
 
-        // Add table names from schema
-        if (schema?.tables) {
-          schema.tables.forEach(table => {
+        // Add table names from schema (use ref to get latest schema value)
+        const currentSchema = schemaRef.current;
+        if (currentSchema?.tables) {
+          currentSchema.tables.forEach(table => {
             suggestions.push({
               label: table.table_name,
               kind: monaco.languages.CompletionItemKind.Class,
@@ -85,10 +145,10 @@ export function SqlEditor({ value, onChange, onRunQuery, schema }: SqlEditorProp
           const dotMatch = /(\w+)\.(\w*)$/.exec(textUntilPosition);
           if (dotMatch) {
             const tableName = dotMatch[1];
-            const table = schema.tables.find(t => 
+            const table = currentSchema.tables.find(t =>
               t.table_name.toLowerCase() === tableName.toLowerCase()
             );
-            
+
             if (table) {
               // Clear suggestions and only show columns
               suggestions.length = 0;

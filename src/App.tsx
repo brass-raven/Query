@@ -67,6 +67,7 @@ function App() {
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [showNewConnection, setShowNewConnection] = useState(false);
+  const [insertAtCursor, setInsertAtCursor] = useState<((text: string) => void) | null>(null);
 
   useEffect(() => {
     loadSavedConnections();
@@ -94,7 +95,9 @@ function App() {
   }
 
   async function saveConnection() {
-    const updated = [...connections, config];
+    // Never save passwords - strip it out for security
+    const { password, ...configWithoutPassword } = config;
+    const updated = [...connections, configWithoutPassword as ConnectionConfig];
     setConnections(updated);
 
     try {
@@ -123,6 +126,7 @@ function App() {
     setSelectedConnection(conn);
     setShowNewConnection(false);
     setConnected(false);
+    connectedRef.current = false;
   }
 
   async function testConnection() {
@@ -158,7 +162,13 @@ function App() {
 
   function handleColumnClick(tableName: string, columnName: string) {
     // Insert column at cursor position in query
-    setQuery((prev) => `${prev}${columnName}`);
+    const textToInsert = `${tableName}.${columnName}`;
+    if (insertAtCursor) {
+      insertAtCursor(textToInsert);
+    } else {
+      // Fallback to append if editor not ready
+      setQuery((prev) => `${prev}${textToInsert}`);
+    }
   }
   async function executeQuery() {
     if (!connectedRef.current) {
@@ -437,6 +447,8 @@ function App() {
                 value={query}
                 onChange={setQuery}
                 onRunQuery={executeQuery}
+                schema={schema}
+                onEditorReady={(insertFn) => setInsertAtCursor(() => insertFn)}
               />
             </div>
 

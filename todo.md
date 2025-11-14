@@ -14,6 +14,9 @@
 - [ ] quick preview of query results
 - [ ] vim keybindings
 - [ ] autocomplete
+- [ ] double click to run query
+- [ ] double click on a table to select * from table * run with limit 100
+- [ ] save encrypted data locally on device, but don't push up (secure variables, or encrypted variables)
 - [ ] other languages
   - mysql
   - mongodb (nosql)
