@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { SqlEditor } from "./components/SqlEditor";
 import { invoke } from "@tauri-apps/api/core";
-import { ResultsTable } from "./components/ResultsTable";
+import { ResultsTableEnhanced } from "./components/ResultsTableEnhanced";
 import { QueryHistory } from "./components/QueryHistory";
 import { SchemaExplorer } from "./components/SchemaExplorer";
 import { SavedQueries } from "./components/SavedQueries";
@@ -66,6 +66,8 @@ function App() {
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [vimMode, setVimMode] = useState(false);
+  const [compactView, setCompactView] = useState(false);
 
   const [config, setConfig] = useState<ConnectionConfig>({
     name: "New Connection",
@@ -183,10 +185,6 @@ function App() {
 
   function handleCommandPaletteQuery(selectedQuery: string) {
     setQuery(selectedQuery);
-    // Auto-execute the query
-    setTimeout(() => {
-      executeQuery();
-    }, 100);
   }
 
   async function saveConnection() {
@@ -658,7 +656,7 @@ function App() {
           <div className="col-span-9 space-y-4">
             {/* Query Editor */}
             <div className="flex items-center justify-between mb-3">
-              <div>
+              <div className="flex-1">
                 <h2 className="font-semibold">Query Editor</h2>
                 <p className="text-xs text-gray-500 mt-1">
                   Press{" "}
@@ -666,9 +664,21 @@ function App() {
                     ⌘ Enter
                   </kbd>{" "}
                   to run • Double-click tables to query
+                  {vimMode && <span className="ml-2 text-green-500">• Vim mode active</span>}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                <button
+                  onClick={() => setVimMode(!vimMode)}
+                  className={`px-3 py-1 rounded text-xs font-mono transition ${
+                    vimMode
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-gray-700 hover:bg-gray-600"
+                  }`}
+                  title="Toggle Vim keybindings"
+                >
+                  {vimMode ? "VIM" : "vim"}
+                </button>
                 <button
                   onClick={() => setShowSaveModal(true)}
                   disabled={!query.trim()}
@@ -692,6 +702,7 @@ function App() {
                 onRunQuery={executeQuery}
                 schema={schema}
                 onEditorReady={(insertFn) => setInsertAtCursor(() => insertFn)}
+                vimMode={vimMode}
               />
             </div>
 
@@ -712,8 +723,19 @@ function App() {
 
           {/* Results */}
           <div>
-            <h2 className="font-semibold mb-3">Results</h2>
-            <ResultsTable result={result} />
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">Results</h2>
+              {result && (
+                <button
+                  onClick={() => setCompactView(!compactView)}
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition"
+                  title={compactView ? "Expand view" : "Compact view"}
+                >
+                  {compactView ? "Expand" : "Compact"}
+                </button>
+              )}
+            </div>
+            <ResultsTableEnhanced result={result} compact={compactView} />
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { Editor } from '@monaco-editor/react';
 import { useRef, useEffect } from 'react';
+import { initVimMode } from 'monaco-vim';
 
 interface SqlEditorProps {
   value: string;
@@ -15,13 +16,15 @@ interface SqlEditorProps {
     }>;
   } | null;
   onEditorReady?: (insertAtCursor: (text: string) => void) => void;
+  vimMode?: boolean;
 }
 
-export function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady }: SqlEditorProps) {
+export function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady, vimMode = false }: SqlEditorProps) {
   const editorRef = useRef<any>(null);
   const schemaRef = useRef(schema);
   const onRunQueryRef = useRef(onRunQuery);
   const completionProviderRef = useRef<any>(null);
+  const vimModeRef = useRef<any>(null);
 
   // Update refs when props change
   useEffect(() => {
@@ -40,6 +43,30 @@ export function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady }
       }
     };
   }, []);
+
+  // Handle vim mode toggle
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    // Dispose existing vim mode
+    if (vimModeRef.current) {
+      vimModeRef.current.dispose();
+      vimModeRef.current = null;
+    }
+
+    // Initialize vim mode if enabled
+    if (vimMode) {
+      const statusNode = document.getElementById('vim-status');
+      vimModeRef.current = initVimMode(editorRef.current, statusNode);
+    }
+
+    return () => {
+      if (vimModeRef.current) {
+        vimModeRef.current.dispose();
+        vimModeRef.current = null;
+      }
+    };
+  }, [vimMode]);
 
   function handleEditorChange(newValue: string | undefined) {
     onChange(newValue || '');
@@ -171,24 +198,32 @@ export function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady }
   }
 
   return (
-    <Editor
-      height="300px"
-      language="sql"
-      theme="vs-dark"
-      value={value}
-      onChange={handleEditorChange}
-      onMount={handleEditorMount}
-      options={{
-        minimap: { enabled: false },
-        fontSize: 14,
-        lineNumbers: 'on',
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-        tabSize: 2,
-        wordWrap: 'on',
-        quickSuggestions: true,
-        suggestOnTriggerCharacters: true,
-      }}
-    />
+    <div className="relative">
+      <Editor
+        height="300px"
+        language="sql"
+        theme="vs-dark"
+        value={value}
+        onChange={handleEditorChange}
+        onMount={handleEditorMount}
+        options={{
+          minimap: { enabled: false },
+          fontSize: 14,
+          lineNumbers: 'on',
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+          wordWrap: 'on',
+          quickSuggestions: true,
+          suggestOnTriggerCharacters: true,
+        }}
+      />
+      {vimMode && (
+        <div
+          id="vim-status"
+          className="absolute bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 px-3 py-1 text-xs font-mono text-gray-400"
+        ></div>
+      )}
+    </div>
   );
 }
