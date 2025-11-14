@@ -1,5 +1,5 @@
-- [ ] quickly change between connections
-- [ ] store data in a specific location
+- [ ] quickly change between connections (environemnts that the user creates)
+- [ ] store data in a specific location (like, a folder that the user selects)
 - [ ] hot query
   - command + k
     - 'select <table name>' -> select * from user
@@ -8,3 +8,11 @@
 - [ ] query history
 - [ ] intellisense
 - [ ] variables (maybe not needed?)
+- [ ] tanstack table
+- [ ] open a config (like have a yaml file that has the config or that instance of the app and then when you open the app, you can select different "projects" (yaml configs) to load from with locations)
+- [ ] other languages
+- [ ] save & pin queries
+- [ ] quick preview of query results
+- [ ] vim keybindings
+  - mysql
+  - mongodb (nosql)

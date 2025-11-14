@@ -1,9 +1,22 @@
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::{Column, Row};
 use std::fs;
 use std::path::PathBuf;
+use std::str::FromStr;
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct QueryHistoryEntry {
+    id: i64,
+    query: String,
+    connection_name: String,
+    execution_time_ms: i64,
+    row_count: i64,
+    executed_at: String, // ISO timestamp
+}
 
 // TODO: ask for location to store the data, & somehow encrypt the password?
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -23,6 +36,116 @@ struct QueryResult {
     rows: Vec<Vec<serde_json::Value>>,
     row_count: usize,
     execution_time_ms: u128,
+}
+
+async fn get_history_db() -> Result<SqlitePool, String> {
+    let app_dir = get_app_dir()?;
+    let db_path = app_dir.join("history.db");
+
+    let options = SqliteConnectOptions::from_str(&format!("sqlite:{}", db_path.display()))
+        .map_err(|e| format!("Failed to create options: {}", e))?
+        .create_if_missing(true);
+
+    let pool = SqlitePool::connect_with(options)
+        .await
+        .map_err(|e| format!("Failed to connect to history db: {}", e))?;
+
+    // Create table if it doesn't exist
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS query_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            query TEXT NOT NULL,
+            connection_name TEXT NOT NULL,
+            execution_time_ms INTEGER NOT NULL,
+            row_count INTEGER NOT NULL,
+            executed_at TEXT NOT NULL
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Failed to create table: {}", e))?;
+
+    Ok(pool)
+}
+
+#[tauri::command]
+async fn save_query_to_history(
+    query: String,
+    connection_name: String,
+    execution_time_ms: i64,
+    row_count: i64,
+) -> Result<(), String> {
+    let pool = get_history_db().await?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    sqlx::query(
+        "INSERT INTO query_history (query, connection_name, execution_time_ms, row_count, executed_at) VALUES (?, ?, ?, ?, ?)"
+    )
+    .bind(&query)
+    .bind(&connection_name)
+    .bind(execution_time_ms)
+    .bind(row_count)
+    .bind(&now)
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Failed to save query: {}", e))?;
+
+    pool.close().await;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_query_history(limit: i64) -> Result<Vec<QueryHistoryEntry>, String> {
+    let pool = get_history_db().await?;
+
+    let rows = sqlx::query_as::<_, (i64, String, String, i64, i64, String)>(
+        "SELECT id, query, connection_name, execution_time_ms, row_count, executed_at 
+         FROM query_history 
+         ORDER BY executed_at DESC 
+         LIMIT ?",
+    )
+    .bind(limit)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to fetch history: {}", e))?;
+
+    pool.close().await;
+
+    let history = rows
+        .into_iter()
+        .map(
+            |(id, query, connection_name, execution_time_ms, row_count, executed_at)| {
+                QueryHistoryEntry {
+                    id,
+                    query,
+                    connection_name,
+                    execution_time_ms,
+                    row_count,
+                    executed_at,
+                }
+            },
+        )
+        .collect();
+
+    Ok(history)
+}
+
+#[tauri::command]
+async fn clear_query_history() -> Result<(), String> {
+    let pool = get_history_db().await?;
+
+    sqlx::query("DELETE FROM query_history")
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to clear history: {}", e))?;
+
+    pool.close().await;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -171,7 +294,10 @@ pub fn run() {
             test_postgres_connection,
             execute_query,
             load_connections,
-            save_connections
+            save_connections,
+            save_query_to_history,
+            get_query_history,
+            clear_query_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
