@@ -68,11 +68,29 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [showNewConnection, setShowNewConnection] = useState(false);
   const [insertAtCursor, setInsertAtCursor] = useState<((text: string) => void) | null>(null);
+  const [showConnectionPicker, setShowConnectionPicker] = useState(false);
 
   useEffect(() => {
     loadSavedConnections();
     loadQueryHistory();
   }, []);
+
+  // Keyboard shortcut for connection picker (Cmd+Shift+C)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
+        e.preventDefault();
+        setShowConnectionPicker((prev) => !prev);
+      }
+      // Close picker on Escape
+      if (e.key === 'Escape' && showConnectionPicker) {
+        setShowConnectionPicker(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showConnectionPicker]);
 
   async function loadSavedConnections() {
     try {
@@ -129,6 +147,20 @@ function App() {
     connectedRef.current = false;
   }
 
+  async function quickSwitchConnection(conn: ConnectionConfig) {
+    // Switch connection and auto-connect if password is already in config
+    setConfig({ ...conn, password: config.name === conn.name ? config.password : "" });
+    setSelectedConnection(conn);
+    setShowConnectionPicker(false);
+    setConnected(false);
+    connectedRef.current = false;
+
+    // Auto-connect if we have a password (user was already connected to this)
+    if (config.name === conn.name && config.password) {
+      await testConnection();
+    }
+  }
+
   async function testConnection() {
     setLoading(true);
     setStatus("");
@@ -158,6 +190,49 @@ function App() {
 
   function handleTableClick(tableName: string) {
     setQuery(`SELECT * FROM ${tableName} LIMIT 100;`);
+  }
+
+  async function handleTableDoubleClick(tableName: string) {
+    // Set query and execute it
+    const newQuery = `SELECT * FROM ${tableName} LIMIT 100;`;
+    setQuery(newQuery);
+
+    // Execute the query
+    if (!connectedRef.current) {
+      setStatus("Please connect to a database first");
+      return;
+    }
+
+    setLoading(true);
+    setStatus("");
+
+    try {
+      const queryResult = await invoke<QueryResult>("execute_query", {
+        config,
+        query: newQuery,
+      });
+
+      setResult(queryResult);
+      setStatus(
+        `Query executed successfully - ${queryResult.row_count} rows in ${queryResult.execution_time_ms}ms`,
+      );
+
+      // Save to history
+      await invoke("save_query_to_history", {
+        query: newQuery,
+        connectionName: config.name,
+        executionTimeMs: queryResult.execution_time_ms,
+        rowCount: queryResult.row_count,
+      });
+
+      // Reload history
+      await loadQueryHistory();
+    } catch (error) {
+      setStatus(`${error}`);
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleColumnClick(tableName: string, columnName: string) {
@@ -226,9 +301,82 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Query</h1>
-          <p className="text-gray-400 text-sm">Fast PostgreSQL client</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Query</h1>
+            <p className="text-gray-400 text-sm">Fast PostgreSQL client</p>
+          </div>
+
+          {/* Connection Picker */}
+          <div className="relative">
+            <button
+              onClick={() => setShowConnectionPicker(!showConnectionPicker)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition"
+            >
+              {connected && (
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              )}
+              <div className="text-left">
+                <p className="text-sm font-medium">
+                  {selectedConnection ? selectedConnection.name : "No connection"}
+                </p>
+                {selectedConnection && (
+                  <p className="text-xs text-gray-400">
+                    {selectedConnection.database}@{selectedConnection.host}
+                  </p>
+                )}
+              </div>
+              <svg
+                className="w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {/* Dropdown */}
+            {showConnectionPicker && (
+              <div className="absolute right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
+                <div className="p-3 border-b border-gray-700 flex items-center justify-between">
+                  <p className="text-sm font-semibold">Switch Connection</p>
+                  <kbd className="px-2 py-1 text-xs bg-gray-900 rounded border border-gray-700">
+                    ⌘⇧C
+                  </kbd>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {connections.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-gray-500">
+                      No saved connections
+                    </div>
+                  ) : (
+                    connections.map((conn) => (
+                      <button
+                        key={conn.name}
+                        onClick={() => quickSwitchConnection(conn)}
+                        className={`w-full text-left p-3 hover:bg-gray-700 transition border-b border-gray-700 last:border-b-0 ${
+                          selectedConnection?.name === conn.name
+                            ? "bg-gray-700"
+                            : ""
+                        }`}
+                      >
+                        <p className="text-sm font-medium">{conn.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {conn.database}@{conn.host}:{conn.port}
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-12 gap-6">
@@ -416,6 +564,7 @@ function App() {
             <SchemaExplorer
               schema={schema}
               onTableClick={handleTableClick}
+              onTableDoubleClick={handleTableDoubleClick}
               onColumnClick={handleColumnClick}
             />
           </div>
@@ -431,7 +580,7 @@ function App() {
                   <kbd className="px-1.5 py-0.5 bg-gray-900 rounded border border-gray-700">
                     ⌘ Enter
                   </kbd>{" "}
-                  to run query
+                  to run • Double-click tables to query
                 </p>
               </div>
               <button

@@ -18,10 +18,11 @@ interface DatabaseSchema {
 interface SchemaExplorerProps {
   schema: DatabaseSchema | null;
   onTableClick: (tableName: string) => void;
+  onTableDoubleClick: (tableName: string) => void;
   onColumnClick: (tableName: string, columnName: string) => void;
 }
 
-export function SchemaExplorer({ schema, onTableClick, onColumnClick }: SchemaExplorerProps) {
+export function SchemaExplorer({ schema, onTableClick, onTableDoubleClick, onColumnClick }: SchemaExplorerProps) {
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
 
   function toggleTable(tableName: string) {
@@ -61,11 +62,15 @@ export function SchemaExplorer({ schema, onTableClick, onColumnClick }: SchemaEx
               <span className="text-xs">
                 {expandedTables.has(table.table_name) ? '▼' : '▶'}
               </span>
-              <span 
+              <span
                 className="text-sm font-mono flex-1"
                 onClick={(e) => {
                   e.stopPropagation();
                   onTableClick(table.table_name);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  onTableDoubleClick(table.table_name);
                 }}
               >
                 {table.table_name}
