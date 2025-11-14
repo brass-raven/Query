@@ -4,6 +4,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { ResultsTable } from "./components/ResultsTable";
 import { QueryHistory } from "./components/QueryHistory";
 import { SchemaExplorer } from "./components/SchemaExplorer";
+import { SavedQueries } from "./components/SavedQueries";
+import { SaveQueryModal } from "./components/SaveQueryModal";
+import { CommandPalette } from "./components/CommandPalette";
 interface ColumnInfo {
   column_name: string;
   data_type: string;
@@ -44,12 +47,25 @@ interface QueryHistoryEntry {
   executed_at: string;
 }
 
+interface SavedQuery {
+  id: number;
+  name: string;
+  query: string;
+  description: string | null;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 function App() {
   const [schema, setSchema] = useState<DatabaseSchema | null>(null);
   const [connections, setConnections] = useState<ConnectionConfig[]>([]);
   const [selectedConnection, setSelectedConnection] =
     useState<ConnectionConfig | null>(null);
   const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
+  const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
 
   const [config, setConfig] = useState<ConnectionConfig>({
     name: "New Connection",
@@ -73,14 +89,21 @@ function App() {
   useEffect(() => {
     loadSavedConnections();
     loadQueryHistory();
+    loadSavedQueries();
   }, []);
 
-  // Keyboard shortcut for connection picker (Cmd+Shift+C)
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+C: Connection picker
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
         e.preventDefault();
         setShowConnectionPicker((prev) => !prev);
+      }
+      // Cmd+K: Command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette((prev) => !prev);
       }
       // Close picker on Escape
       if (e.key === 'Escape' && showConnectionPicker) {
@@ -110,6 +133,60 @@ function App() {
     } catch (error) {
       console.error("Failed to load history:", error);
     }
+  }
+
+  async function loadSavedQueries() {
+    try {
+      const queries = await invoke<SavedQuery[]>("get_saved_queries");
+      setSavedQueries(queries);
+    } catch (error) {
+      console.error("Failed to load saved queries:", error);
+    }
+  }
+
+  async function handleSaveQuery(name: string, description: string) {
+    try {
+      await invoke("save_query", {
+        name,
+        query,
+        description: description || null,
+      });
+      await loadSavedQueries();
+      setStatus(`Query "${name}" saved successfully`);
+    } catch (error) {
+      setStatus(`Failed to save query: ${error}`);
+    }
+  }
+
+  async function handleDeleteSavedQuery(id: number) {
+    try {
+      await invoke("delete_saved_query", { id });
+      await loadSavedQueries();
+      setStatus("Query deleted");
+    } catch (error) {
+      setStatus(`Failed to delete query: ${error}`);
+    }
+  }
+
+  async function handleTogglePin(id: number) {
+    try {
+      await invoke("toggle_pin_query", { id });
+      await loadSavedQueries();
+    } catch (error) {
+      setStatus(`Failed to toggle pin: ${error}`);
+    }
+  }
+
+  function selectSavedQuery(selectedQuery: string) {
+    setQuery(selectedQuery);
+  }
+
+  function handleCommandPaletteQuery(selectedQuery: string) {
+    setQuery(selectedQuery);
+    // Auto-execute the query
+    setTimeout(() => {
+      executeQuery();
+    }, 100);
   }
 
   async function saveConnection() {
@@ -554,6 +631,14 @@ function App() {
               </div>
             )}
 
+            {/* Saved Queries */}
+            <SavedQueries
+              queries={savedQueries}
+              onSelectQuery={selectSavedQuery}
+              onDeleteQuery={handleDeleteSavedQuery}
+              onTogglePin={handleTogglePin}
+            />
+
             {/* Query History */}
             <QueryHistory
               history={history}
@@ -583,13 +668,22 @@ function App() {
                   to run • Double-click tables to query
                 </p>
               </div>
-              <button
-                onClick={executeQuery}
-                disabled={loading || !connected}
-                className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm font-medium disabled:opacity-50 transition"
-              >
-                {loading ? "Running..." : "Run Query"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowSaveModal(true)}
+                  disabled={!query.trim()}
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium disabled:opacity-50 transition"
+                >
+                  Save Query
+                </button>
+                <button
+                  onClick={executeQuery}
+                  disabled={loading || !connected}
+                  className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm font-medium disabled:opacity-50 transition"
+                >
+                  {loading ? "Running..." : "Run Query"}
+                </button>
+              </div>
             </div>
             <div className="border border-gray-700 rounded overflow-hidden">
               <SqlEditor
@@ -623,6 +717,23 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Save Query Modal */}
+      <SaveQueryModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={handleSaveQuery}
+        currentQuery={query}
+      />
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        schema={schema}
+        history={history}
+        onExecuteQuery={handleCommandPaletteQuery}
+      />
     </div>
   );
 }

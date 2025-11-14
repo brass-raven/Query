@@ -18,6 +18,17 @@ struct QueryHistoryEntry {
     executed_at: String, // ISO timestamp
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct SavedQuery {
+    id: i64,
+    name: String,
+    query: String,
+    description: Option<String>,
+    is_pinned: bool,
+    created_at: String, // ISO timestamp
+    updated_at: String, // ISO timestamp
+}
+
 // TODO: ask for location to store the data, & somehow encrypt the password?
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct ConnectionConfig {
@@ -231,6 +242,150 @@ async fn clear_query_history() -> Result<(), String> {
     Ok(())
 }
 
+async fn get_saved_queries_db() -> Result<SqlitePool, String> {
+    let app_dir = get_app_dir()?;
+    let db_path = app_dir.join("saved_queries.db");
+
+    let options = SqliteConnectOptions::from_str(&format!("sqlite:{}", db_path.display()))
+        .map_err(|e| format!("Failed to create options: {}", e))?
+        .create_if_missing(true);
+
+    let pool = SqlitePool::connect_with(options)
+        .await
+        .map_err(|e| format!("Failed to connect to saved queries db: {}", e))?;
+
+    // Create table if it doesn't exist
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS saved_queries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            query TEXT NOT NULL,
+            description TEXT,
+            is_pinned BOOLEAN NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Failed to create table: {}", e))?;
+
+    Ok(pool)
+}
+
+#[tauri::command]
+async fn save_query(
+    name: String,
+    query: String,
+    description: Option<String>,
+) -> Result<SavedQuery, String> {
+    let pool = get_saved_queries_db().await?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    let result = sqlx::query(
+        "INSERT INTO saved_queries (name, query, description, is_pinned, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)"
+    )
+    .bind(&name)
+    .bind(&query)
+    .bind(&description)
+    .bind(&now)
+    .bind(&now)
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Failed to save query: {}", e))?;
+
+    let id = result.last_insert_rowid();
+
+    pool.close().await;
+
+    Ok(SavedQuery {
+        id,
+        name,
+        query,
+        description,
+        is_pinned: false,
+        created_at: now.clone(),
+        updated_at: now,
+    })
+}
+
+#[tauri::command]
+async fn get_saved_queries() -> Result<Vec<SavedQuery>, String> {
+    let pool = get_saved_queries_db().await?;
+
+    let rows = sqlx::query_as::<_, (i64, String, String, Option<String>, bool, String, String)>(
+        "SELECT id, name, query, description, is_pinned, created_at, updated_at
+         FROM saved_queries
+         ORDER BY is_pinned DESC, name ASC",
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to fetch saved queries: {}", e))?;
+
+    pool.close().await;
+
+    let queries = rows
+        .into_iter()
+        .map(
+            |(id, name, query, description, is_pinned, created_at, updated_at)| SavedQuery {
+                id,
+                name,
+                query,
+                description,
+                is_pinned,
+                created_at,
+                updated_at,
+            },
+        )
+        .collect();
+
+    Ok(queries)
+}
+
+#[tauri::command]
+async fn delete_saved_query(id: i64) -> Result<(), String> {
+    let pool = get_saved_queries_db().await?;
+
+    sqlx::query("DELETE FROM saved_queries WHERE id = ?")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to delete query: {}", e))?;
+
+    pool.close().await;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn toggle_pin_query(id: i64) -> Result<bool, String> {
+    let pool = get_saved_queries_db().await?;
+
+    // Get current pin status
+    let row = sqlx::query_as::<_, (bool,)>("SELECT is_pinned FROM saved_queries WHERE id = ?")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| format!("Failed to fetch query: {}", e))?;
+
+    let new_pin_status = !row.0;
+
+    // Update pin status
+    sqlx::query("UPDATE saved_queries SET is_pinned = ? WHERE id = ?")
+        .bind(new_pin_status)
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to update pin status: {}", e))?;
+
+    pool.close().await;
+
+    Ok(new_pin_status)
+}
+
 #[tauri::command]
 async fn test_postgres_connection(config: ConnectionConfig) -> Result<String, String> {
     // build connection string
@@ -382,6 +537,10 @@ pub fn run() {
             get_query_history,
             clear_query_history,
             get_database_schema,
+            save_query,
+            get_saved_queries,
+            delete_saved_query,
+            toggle_pin_query,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

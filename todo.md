@@ -6,12 +6,12 @@
 - [x] quickly change between connections (dropdown in header + Cmd+Shift+C)
 
 
-### Phase 2: Core Power Features
-- [ ] save & pin queries
-- [ ] hot query
-  - command + k
-    - 'select <table name>' -> select * from user
-    - 'update <table name>' -> update table where ...
+### ✅ Phase 2: Core Power Features (COMPLETED)
+- [x] save & pin queries
+- [x] hot query (command + k)
+  - Quick commands: SELECT, UPDATE, DESCRIBE, COUNT for any table
+  - Fuzzy search for tables
+  - Shows recent queries from history
 
 ### Phase 3: Advanced Editor
 - [ ] vim keybindings
