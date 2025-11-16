@@ -91,7 +91,23 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
       };
 
       const insertSnippet = (snippet: string) => {
-        editor.trigger('keyboard', 'editor.action.insertSnippet', { snippet });
+        // Remove snippet placeholders (${1:text}) and keep just the text
+        const plainText = snippet.replace(/\$\{\d+:([^}]+)\}/g, '$1').replace(/\$\d+/g, '');
+        const position = editor.getPosition();
+        if (!position) return;
+
+        const range = new monaco.Range(
+          position.lineNumber,
+          position.column,
+          position.lineNumber,
+          position.column
+        );
+
+        editor.executeEdits('', [{
+          range: range,
+          text: plainText,
+          forceMoveMarkers: true,
+        }]);
         editor.focus();
       };
 

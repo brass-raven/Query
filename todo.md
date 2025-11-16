@@ -46,6 +46,7 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - [x] read-only mode indicator in header
   - [x] layout direction toggle button
   - [x] CMD+K button in header
+- [x] make table area horizontally scrollable
 
 ### Priority Features (Next to Implement)
 - [ ] multi-row selection & manipulation
@@ -65,7 +66,6 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 
 ### Low Priority
 - [ ] cancel query (abort long-running queries)
-- [ ] make table area horizontally scrollable
 - [ ] header in native macOS title bar (next to traffic lights)
 - [ ] bottom of sidebar: git actions UI (commit, push, pull, init)
 - [ ] improved editor styling (better integration with overall design)
