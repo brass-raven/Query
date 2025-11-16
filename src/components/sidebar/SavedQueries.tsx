@@ -1,3 +1,4 @@
+import { Pin, PinOff } from 'lucide-react';
 import type { SavedQuery } from '../../types';
 import { Badge } from '../ui/badge';
 
@@ -59,7 +60,7 @@ export function SavedQueries({
               {tag.label}
             </Badge>
             {savedQuery.is_pinned && (
-              <span className="text-yellow-500 text-xs">📌</span>
+              <span className="text-yellow-500 text-xs"><PinOff/></span>
             )}
             <p className="text-sm font-medium truncate">{savedQuery.name}</p>
           </div>
@@ -81,7 +82,7 @@ export function SavedQueries({
             className="text-gray-400 hover:text-yellow-500 text-xs px-1"
             title={savedQuery.is_pinned ? "Unpin" : "Pin"}
           >
-            {savedQuery.is_pinned ? "📌" : "📍"}
+            {savedQuery.is_pinned ? <PinOff/> : <Pin/>}
           </button>
           <button
             onClick={(e) => {

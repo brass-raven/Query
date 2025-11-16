@@ -51,7 +51,7 @@
   - table columns hide and show
   - better look for the editor, looks out of place (style and everything)
 - [ ] snippet stype tabbing, for example when you do the "cmd+k" and do the "update user" command, it should write in the the editor: "UPDATE users SET name = '$1' WHERE id = $2;" and then you can tab to the next field
-- [ ] manage connections in settings
+- [ ] manage connections in settings (create, delete, rename, etc.)
 - [ ] open settings with command + , 
 - [ ] make table area scrollable from left to right
 - [ ] header information should be in the very top of the app, right next to the "x", "-", and expand buttons on mac. this may be a tauri setting.
