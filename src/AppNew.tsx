@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./components/ui/select";
-import { Play, Database, Save, Settings as SettingsIcon, Plus } from "lucide-react";
+import { Play, Database, Save, Settings as SettingsIcon, Plus, Download } from "lucide-react";
 import { SqlEditor } from "./components/editor/SqlEditor";
 import { ResultsTableEnhanced } from "./components/results/ResultsTableEnhanced";
 import { SaveQueryModal } from "./components/modals/SaveQueryModal";
@@ -42,8 +42,8 @@ export default function AppNew() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
-  const [vimMode] = useState(false);
-  const [compactView] = useState(false);
+  const [vimMode, setVimMode] = useState(false);
+  const [compactView, setCompactView] = useState(false);
   const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(
     null,
   );
@@ -339,6 +339,57 @@ export default function AppNew() {
     runQuery();
   }, [runQuery]);
 
+  const exportToCSV = useCallback(() => {
+    if (!result) return;
+
+    // Create CSV header
+    const csv = [
+      result.columns.join(','),
+      ...result.rows.map(row =>
+        row.map(cell => {
+          // Handle null, quotes, and commas
+          if (cell === null) return '';
+          const str = String(cell);
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create download link
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `query_results_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }, [result]);
+
+  const exportToJSON = useCallback(() => {
+    if (!result) return;
+
+    // Convert rows to objects with column names as keys
+    const data = result.rows.map(row => {
+      const obj: any = {};
+      result.columns.forEach((col, idx) => {
+        obj[col] = row[idx];
+      });
+      return obj;
+    });
+
+    const json = JSON.stringify(data, null, 2);
+
+    // Create download link
+    const blob = new Blob([json], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `query_results_${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }, [result]);
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
@@ -427,6 +478,14 @@ export default function AppNew() {
                     <h3 className="text-sm font-medium">Query Editor</h3>
                     <div className="flex items-center gap-2">
                       <Button
+                        variant={vimMode ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setVimMode(!vimMode)}
+                        title="Toggle Vim mode"
+                      >
+                        <span className="text-xs font-mono">VIM</span>
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowSaveModal(true)}
@@ -478,6 +537,32 @@ export default function AppNew() {
                         <Badge variant="secondary">
                           {result.execution_time_ms}ms
                         </Badge>
+                        <Button
+                          variant={compactView ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCompactView(!compactView)}
+                          title="Toggle compact view"
+                        >
+                          <span className="text-xs">Compact</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={exportToCSV}
+                          title="Export as CSV"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          CSV
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={exportToJSON}
+                          title="Export as JSON"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          JSON
+                        </Button>
                       </div>
                     )}
                   </div>

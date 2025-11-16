@@ -21,13 +21,13 @@
   - move functions to their own folder
   - move types to their own folder
   - move constants to their own folder
+- [x] speed (when having a lot of lines, the app is slow, need to optimize and lazy load the results)
+- [x] export/import
+- [x] show vim mode in ui (already implemented but cannot see)
 
 ### feats
-- [ ] speed (when having a lot of lines, the app is slow, need to optimize and lazy load the results)
-- [ ] export/import
 - [ ] cancel query
-- [ ] show vim mode in ui (already implemented but cannot see)
-- [ ] settings page
+- [ ] settings page instead of a modal - vim mode should be in here
 - [ ] update dialog to look better (use shadcn)
 - [ ] inline data editing
 - [ ] search & filter within results
@@ -43,7 +43,16 @@
   - mongodb (nosql)
 - [ ] styling:
   - left sidebar needs to be able to move
-  - use sidebar from shadcn page: https://ui.shadcn.com/docs/components/sidebar
+  - sidebar updates:
+    - for saved queries it should have like [SEL] User as the name and the "sel" should be a color, same with all
+    - for the schema page, each table should be a shadcn sidebar dropdown, with sel, del, upd, etc. below for the table for quick actions
+  - update header: should look like this from left to right: 
+    - sidebar toggle, 
+    - "Env [prod]" (the env name is a dropdown to click on and a plus button is in the dropdown to create a new connection), 
+    - read only mode
+    - on far right side: toggle which way the results are displayed (vertical or horizontal), then a "CMD+K" button to toggle the quick actions menu
+  - bottom of sidebar: git actions (commit, push, pull, or "init")
+  - table columns hide and show
 
 
 example of schema comparison:
