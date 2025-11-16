@@ -101,7 +101,10 @@ pub async fn execute_query(
 }
 
 #[tauri::command]
-pub async fn get_database_schema(config: ConnectionConfig) -> Result<DatabaseSchema, String> {
+pub async fn get_database_schema(
+    config: ConnectionConfig,
+    schema: Option<String>,
+) -> Result<DatabaseSchema, String> {
     let connection_string = format!(
         "postgres://{}:{}@{}:{}/{}",
         config.username, config.password, config.host, config.port, config.database
@@ -111,13 +114,16 @@ pub async fn get_database_schema(config: ConnectionConfig) -> Result<DatabaseSch
         .await
         .map_err(|e| format!("Connection failed: {}", e))?;
 
+    let schema_name = schema.unwrap_or_else(|| "public".to_string());
+
     let table_rows = sqlx::query(
         "SELECT table_name
          FROM information_schema.tables
-         WHERE table_schema = 'public'
+         WHERE table_schema = $1
          AND table_type = 'BASE TABLE'
          ORDER BY table_name",
     )
+    .bind(&schema_name)
     .fetch_all(&pool)
     .await
     .map_err(|e| format!("Failed to fetch tables: {}", e))?;
@@ -132,10 +138,11 @@ pub async fn get_database_schema(config: ConnectionConfig) -> Result<DatabaseSch
         let column_rows = sqlx::query(
             "SELECT column_name, data_type, is_nullable
              FROM information_schema.columns
-             WHERE table_schema = 'public'
-             AND table_name = $1
+             WHERE table_schema = $1
+             AND table_name = $2
              ORDER BY ordinal_position",
         )
+        .bind(&schema_name)
         .bind(&table_name)
         .fetch_all(&pool)
         .await
@@ -165,4 +172,40 @@ pub async fn get_database_schema(config: ConnectionConfig) -> Result<DatabaseSch
     pool.close().await;
 
     Ok(DatabaseSchema { tables })
+}
+
+#[tauri::command]
+pub async fn get_database_schemas(config: ConnectionConfig) -> Result<Vec<String>, String> {
+    let connection_string = format!(
+        "postgres://{}:{}@{}:{}/{}",
+        config.username, config.password, config.host, config.port, config.database
+    );
+
+    let pool = PgPool::connect(&connection_string)
+        .await
+        .map_err(|e| format!("Connection failed: {}", e))?;
+
+    let schema_rows = sqlx::query(
+        "SELECT schema_name
+         FROM information_schema.schemata
+         WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+         AND schema_name NOT LIKE 'pg_temp_%'
+         AND schema_name NOT LIKE 'pg_toast_temp_%'
+         ORDER BY schema_name",
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| format!("Failed to fetch schemas: {}", e))?;
+
+    let mut schemas = Vec::new();
+    for row in schema_rows {
+        let schema_name: String = row
+            .try_get("schema_name")
+            .map_err(|e| format!("Failed to get schema name: {}", e))?;
+        schemas.push(schema_name);
+    }
+
+    pool.close().await;
+
+    Ok(schemas)
 }

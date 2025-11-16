@@ -3,7 +3,9 @@ use crate::storage::{
     delete_password_from_keychain, get_password_from_keychain, save_password_to_keychain,
 };
 use crate::utils::{
-    get_current_project_path_internal, load_project_settings_internal, set_project_path_internal,
+    get_auto_connect_enabled_internal, get_current_project_path_internal, get_last_connection_internal,
+    load_project_settings_internal, set_auto_connect_enabled_internal, set_last_connection_internal,
+    set_project_path_internal,
 };
 
 #[tauri::command]
@@ -51,4 +53,24 @@ pub fn delete_connection_password(name: String) -> Result<(), String> {
 pub fn load_connections() -> Result<Vec<ConnectionConfig>, String> {
     let app_dir = crate::utils::get_app_dir()?;
     crate::storage::load_connections(app_dir)
+}
+
+#[tauri::command]
+pub fn set_last_connection(connection_name: String) -> Result<(), String> {
+    set_last_connection_internal(connection_name)
+}
+
+#[tauri::command]
+pub fn get_last_connection() -> Result<Option<String>, String> {
+    get_last_connection_internal()
+}
+
+#[tauri::command]
+pub fn set_auto_connect_enabled(enabled: bool) -> Result<(), String> {
+    set_auto_connect_enabled_internal(enabled)
+}
+
+#[tauri::command]
+pub fn get_auto_connect_enabled() -> Result<bool, String> {
+    get_auto_connect_enabled_internal()
 }

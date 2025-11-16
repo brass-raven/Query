@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +69,35 @@ export const Settings = memo(function Settings({
   onNewConnection,
 }: SettingsProps) {
   const [isChangingPath, setIsChangingPath] = useState(false);
+  const [autoConnectEnabled, setAutoConnectEnabled] = useState(false);
+  const [lastConnectionName, setLastConnectionName] = useState<string | null>(null);
+
+  // Load auto-connect settings when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadAutoConnectSettings();
+    }
+  }, [isOpen]);
+
+  const loadAutoConnectSettings = useCallback(async () => {
+    try {
+      const enabled = await invoke<boolean>("get_auto_connect_enabled");
+      const lastConn = await invoke<string | null>("get_last_connection");
+      setAutoConnectEnabled(enabled);
+      setLastConnectionName(lastConn);
+    } catch (error) {
+      console.error("Failed to load auto-connect settings:", error);
+    }
+  }, []);
+
+  const handleAutoConnectToggle = useCallback(async (enabled: boolean) => {
+    try {
+      await invoke("set_auto_connect_enabled", { enabled });
+      setAutoConnectEnabled(enabled);
+    } catch (error) {
+      console.error("Failed to set auto-connect:", error);
+    }
+  }, []);
 
   const handleChangeProjectPath = useCallback(async () => {
     setIsChangingPath(true);
@@ -164,16 +193,20 @@ export const Settings = memo(function Settings({
                         <Label htmlFor="auto-connect">Auto-connect to last connection</Label>
                         <p className="text-xs text-muted-foreground">
                           Automatically connect when opening the app
+                          {lastConnectionName && ` (${lastConnectionName})`}
                         </p>
                       </div>
                       <Switch
                         id="auto-connect"
-                        disabled
+                        checked={autoConnectEnabled}
+                        onCheckedChange={handleAutoConnectToggle}
                       />
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      Coming soon
-                    </Badge>
+                    {!lastConnectionName && (
+                      <p className="text-xs text-muted-foreground">
+                        Connect to a database first to enable auto-connect
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

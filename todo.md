@@ -48,17 +48,13 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - [x] CMD+K button in header
 
 ### Priority Features (Next to Implement)
-- [ ] PostgreSQL schema selector (switch between public, custom schemas, etc.)
-- [ ] cancel query (abort long-running queries)
-- [ ] auto connect to previously used connection on startup
-- [ ] column visibility toggle (show/hide columns in results)
-- [ ] better git integration (commit, push, pull in app) - **currently placeholder in sidebar footer**
-
-### Future Features
+- [ ] multi-row selection & manipulation
 - [ ] inline data editing
 - [ ] search & filter within results (beyond current column filters)
+- [ ] better git integration (commit, push, pull in app) - **currently placeholder in sidebar footer**
 - [ ] snippet-style tabbing for query templates (e.g., UPDATE users SET $1 WHERE $2)
-- [ ] multi-row selection & manipulation
+
+### Future Features
 - [ ] ERD (entity relationship diagram)
 - [ ] schema comparison (dev, staging, prod) - see detailed mockup below
 - [ ] robust table manipulation (create, alter, drop tables from UI)
@@ -67,7 +63,8 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - mysql
   - mongodb (nosql)
 
-### Styling Polish (Low Priority)
+### Low Priority
+- [ ] cancel query (abort long-running queries)
 - [ ] make table area horizontally scrollable
 - [ ] header in native macOS title bar (next to traffic lights)
 - [ ] bottom of sidebar: git actions UI (commit, push, pull, init)

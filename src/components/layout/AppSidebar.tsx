@@ -46,6 +46,9 @@ import type {
 
 interface AppSidebarProps {
   schema: DatabaseSchema | null;
+  availableSchemas: string[];
+  selectedSchema: string;
+  onSchemaChange: (schema: string) => void;
   history: QueryHistoryEntry[];
   savedQueries: SavedQuery[];
   connections: ConnectionConfig[];
@@ -95,6 +98,9 @@ function getQueryTag(query: string): { label: string; className: string } {
 
 export const AppSidebar = memo(function AppSidebar({
   schema,
+  availableSchemas,
+  selectedSchema,
+  onSchemaChange,
   history,
   savedQueries,
   connections,
@@ -169,13 +175,31 @@ export const AppSidebar = memo(function AppSidebar({
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {/* Schema Section */}
+                {/* Schema Selector */}
+                {availableSchemas.length > 0 && (
+                  <SidebarMenuItem className="mb-2">
+                    <Select value={selectedSchema} onValueChange={onSchemaChange}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select schema" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSchemas.map((schema) => (
+                          <SelectItem key={schema} value={schema} className="text-xs">
+                            {schema}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </SidebarMenuItem>
+                )}
+
+                {/* Tables Section */}
                 <Collapsible defaultOpen className="group/collapsible">
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton>
                         <Database className="h-4 w-4" />
-                        <span>Schema</span>
+                        <span>Tables</span>
                         <span className="ml-auto text-xs text-muted-foreground">
                           {schema?.tables.length || 0}
                         </span>

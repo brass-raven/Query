@@ -43,6 +43,8 @@ import { DEFAULT_CONNECTION } from "./constants";
 
 export default function AppNew() {
   const [schema, setSchema] = useState<DatabaseSchema | null>(null);
+  const [availableSchemas, setAvailableSchemas] = useState<string[]>([]);
+  const [selectedSchema, setSelectedSchema] = useState<string>("public");
   const [connections, setConnections] = useState<ConnectionConfig[]>([]);
   const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
@@ -85,10 +87,76 @@ export default function AppNew() {
         console.error("Failed to load project settings:", error);
       }
 
-      loadSavedConnections();
+      await loadSavedConnections();
       loadQueryHistory();
       loadSavedQueries();
       loadCurrentProjectPath();
+
+      // Check if auto-connect is enabled
+      try {
+        const autoConnectEnabled = await invoke<boolean>("get_auto_connect_enabled");
+        const lastConnectionName = await invoke<string | null>("get_last_connection");
+
+        console.log("Auto-connect check:", { autoConnectEnabled, lastConnectionName });
+
+        if (autoConnectEnabled && lastConnectionName) {
+          // Try to auto-connect
+          const savedConns = await invoke<ConnectionConfig[]>("load_connections");
+          const lastConn = savedConns.find((c) => c.name === lastConnectionName);
+
+          console.log("Found connection:", lastConn);
+
+          if (lastConn) {
+            // Load password from keychain (or use empty string if no password)
+            const password = await invoke<string | null>("get_connection_password", {
+              name: lastConnectionName,
+            });
+
+            console.log("Password retrieved:", password ? "yes" : "no (using empty string)");
+
+            // Use password from keychain, or empty string if none stored
+            const connWithPassword = { ...lastConn, password: password || "" };
+            setConfig(connWithPassword);
+            setReadOnlyMode(lastConn.readOnly || false);
+
+            // Auto-connect
+            setLoading(true);
+            try {
+              const result = await invoke<string>("test_postgres_connection", {
+                config: connWithPassword,
+              });
+              setStatus(`Auto-connected: ${result}`);
+              setConnected(true);
+              connectedRef.current = true;
+
+              // Load available schemas
+              const schemas = await invoke<string[]>("get_database_schemas", {
+                config: connWithPassword,
+              });
+              setAvailableSchemas(schemas);
+
+              // Load schema (default to 'public')
+              const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
+                config: connWithPassword,
+                schema: "public",
+              });
+              setSchema(dbSchema);
+              setSelectedSchema("public");
+            } catch (error) {
+              setStatus(`Auto-connect failed: ${error}`);
+              setConnected(false);
+              connectedRef.current = false;
+              setSchema(null);
+            } finally {
+              setLoading(false);
+            }
+          } else {
+            console.warn("Connection not found:", lastConnectionName);
+          }
+        }
+      } catch (error) {
+        console.error("Auto-connect failed:", error);
+      }
     }
     initialize();
   }, []);
@@ -236,7 +304,7 @@ export default function AppNew() {
         const updated = connections.filter((c) => c.name !== name);
 
         // Delete from keychain
-        await invoke("delete_connection_password", { connectionName: name });
+        await invoke("delete_connection_password", { name });
 
         // Delete from JSON
         await invoke("save_connections", { connections: updated });
@@ -392,11 +460,23 @@ export default function AppNew() {
         setStatus(result);
         setConnected(true);
         connectedRef.current = true;
-        // Load schema after successful connection
-        const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
+
+        // Load available schemas
+        const schemas = await invoke<string[]>("get_database_schemas", {
           config: conn,
         });
+        setAvailableSchemas(schemas);
+
+        // Load schema after successful connection (default to 'public')
+        const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
+          config: conn,
+          schema: "public",
+        });
         setSchema(dbSchema);
+        setSelectedSchema("public");
+
+        // Save as last connection for auto-connect
+        await invoke("set_last_connection", { connectionName: conn.name });
       } catch (error) {
         setStatus(`Connection failed: ${error}`);
         setConnected(false);
@@ -416,6 +496,26 @@ export default function AppNew() {
     },
     [runQuery],
   );
+
+  const handleSchemaChange = useCallback(async (schemaName: string) => {
+    if (!connected || !config) return;
+
+    setSelectedSchema(schemaName);
+    setLoading(true);
+
+    try {
+      const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
+        config,
+        schema: schemaName,
+      });
+      setSchema(dbSchema);
+      setStatus(`Loaded schema: ${schemaName}`);
+    } catch (error) {
+      setStatus(`Failed to load schema ${schemaName}: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [connected, config]);
 
   const exportToCSV = useCallback(() => {
     if (!result) return;
@@ -475,6 +575,9 @@ export default function AppNew() {
       <div className="flex h-screen w-full">
         <AppSidebar
           schema={schema}
+          availableSchemas={availableSchemas}
+          selectedSchema={selectedSchema}
+          onSchemaChange={handleSchemaChange}
           history={history}
           savedQueries={savedQueries}
           connections={connections}

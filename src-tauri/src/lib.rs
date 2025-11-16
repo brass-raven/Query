@@ -23,6 +23,7 @@ pub fn run() {
             test_postgres_connection,
             execute_query,
             get_database_schema,
+            get_database_schemas,
             // History commands
             save_query_to_history,
             get_query_history,
@@ -37,6 +38,10 @@ pub fn run() {
             get_current_project_path,
             load_project_settings,
             get_app_dir,
+            set_last_connection,
+            get_last_connection,
+            set_auto_connect_enabled,
+            get_auto_connect_enabled,
             // Connection storage commands
             save_connections,
             load_connections,
