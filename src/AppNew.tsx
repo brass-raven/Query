@@ -14,7 +14,6 @@ import {
 import { Button } from "./components/ui/button";
 import { Separator } from "./components/ui/separator";
 import { Badge } from "./components/ui/badge";
-import { ScrollArea, ScrollBar } from "./components/ui/scroll-area";
 import {
   Play,
   Save,

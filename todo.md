@@ -50,8 +50,15 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 - [x] full-screen results mode with keyboard shortcut (Cmd+Shift+F)
 - [x] improved editor styling (custom Monaco theme matching app colors)
 
+- [x] multi-row selection & manipulation
+  - [x] Checkbox column for row selection
+  - [x] Select all/none functionality
+  - [x] Selection count display
+  - [x] Copy selected rows to clipboard (CSV/JSON)
+  - [x] Visual feedback for selected rows
+  - [x] Keyboard shortcuts (Escape to clear)
+
 ### Priority Features
-- [ ] multi-row selection & manipulation
 - [ ] inline data editing
 - [ ] better git integration (commit, push, pull in app) - **currently placeholder in sidebar footer**
 - [ ] snippet-style tabbing for query templates (e.g., UPDATE users SET $1 WHERE $2)

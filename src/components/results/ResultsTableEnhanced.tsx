@@ -9,6 +9,7 @@ import {
   SortingState,
   ColumnFiltersState,
   VisibilityState,
+  RowSelectionState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "../ui/button";
@@ -18,8 +19,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { EyeOff, Search, X } from "lucide-react";
+import { EyeOff, Search, X, Copy, CheckSquare } from "lucide-react";
 import { Input } from "../ui/input";
+import { Badge } from "../ui/badge";
+import { IndeterminateCheckbox } from "../ui/indeterminate-checkbox";
+import { cn } from "@/lib/utils";
 import type { QueryResult } from '../../types';
 
 interface ResultsTableEnhancedProps {
@@ -32,6 +36,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState('');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Transform data for TanStack Table
@@ -48,17 +53,41 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
 
   const columns = useMemo<ColumnDef<any>[]>(() => {
     if (!result) return [];
-    return result.columns.map((col) => ({
+
+    const selectColumn: ColumnDef<any> = {
+      id: 'select',
+      header: ({ table }) => (
+        <IndeterminateCheckbox
+          checked={table.getIsAllRowsSelected()}
+          indeterminate={table.getIsSomeRowsSelected()}
+          onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+        />
+      ),
+      cell: ({ row }) => (
+        <div className="px-1">
+          <IndeterminateCheckbox
+            checked={row.getIsSelected()}
+            disabled={!row.getCanSelect()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+          />
+        </div>
+      ),
+      size: 40,
+      enableSorting: false,
+      enableHiding: false,
+    };
+
+    const dataColumns = result.columns.map((col) => ({
       accessorKey: col,
       header: col,
-      cell: (info) => {
+      cell: (info: any) => {
         const value = info.getValue();
         if (value === null) return <span className="text-gray-500 italic">null</span>;
         if (typeof value === "boolean") return value ? "true" : "false";
         if (typeof value === "object") return JSON.stringify(value);
         return String(value);
       },
-      filterFn: (row, columnId, filterValue) => {
+      filterFn: (row: any, columnId: string, filterValue: any) => {
         const value = row.getValue(columnId);
         if (value === null || value === undefined) return false;
 
@@ -69,6 +98,8 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
         return stringValue.includes(stringFilter);
       },
     }));
+
+    return [selectColumn, ...dataColumns];
   }, [result]);
 
   const table = useReactTable({
@@ -79,11 +110,14 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
       columnFilters,
       columnVisibility,
       globalFilter,
+      rowSelection,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -104,6 +138,29 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
       tableContainerRef.current.scrollTop = 0;
     }
   }, [columnFilters, sorting, globalFilter]);
+
+  // Keyboard shortcuts for selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentSelectedCount = Object.keys(rowSelection).filter(key => rowSelection[key]).length;
+
+      // Cmd+A: Select all visible rows (only when table container is focused or in view)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a' && tableContainerRef.current) {
+        const isTableInFocus = tableContainerRef.current.contains(document.activeElement);
+        if (isTableInFocus) {
+          e.preventDefault();
+          table.toggleAllRowsSelected(true);
+        }
+      }
+      // Escape: Clear selection
+      if (e.key === 'Escape' && currentSelectedCount > 0) {
+        setRowSelection({});
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [table, rowSelection]);
 
   if (!result) {
     return (
@@ -134,6 +191,51 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
       : 0;
 
   const activeFilterCount = columnFilters.length + (globalFilter ? 1 : 0);
+  const selectedRowCount = Object.keys(rowSelection).filter(key => rowSelection[key]).length;
+  const totalRowCount = rows.length;
+
+  // Helper to get selected row data
+  const getSelectedRowsData = () => {
+    return rows
+      .filter((row) => row.getIsSelected())
+      .map((row) => row.original);
+  };
+
+  // Copy to clipboard function
+  const copyToClipboard = async (text: string, format: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // TODO: Add toast notification
+      console.log(`Copied ${selectedRowCount} rows as ${format}`);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  // Copy as CSV
+  const copyAsCSV = () => {
+    if (!result) return;
+    const selectedData = getSelectedRowsData();
+    const csv = [
+      result.columns.join(','),
+      ...selectedData.map((row: any) =>
+        result.columns.map((col) => {
+          const value = row[col];
+          if (value === null) return '';
+          if (typeof value === 'string' && value.includes(',')) return `"${value}"`;
+          return value;
+        }).join(',')
+      )
+    ].join('\n');
+    copyToClipboard(csv, 'CSV');
+  };
+
+  // Copy as JSON
+  const copyAsJSON = () => {
+    const selectedData = getSelectedRowsData();
+    const json = JSON.stringify(selectedData, null, 2);
+    copyToClipboard(json, 'JSON');
+  };
 
   return (
     <div className="rounded-lg border flex flex-col flex-1 min-h-0">
@@ -208,6 +310,61 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
             </button>
           )}
         </div>
+
+        {/* Selection action bar - only shown when rows are selected */}
+        {selectedRowCount > 0 && (
+          <div className="flex items-center justify-between px-4 py-2 bg-primary/5 border-t">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-primary/20 text-primary">
+                {selectedRowCount} of {totalRowCount} rows selected
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={copyAsCSV}
+                title="Copy selected rows as CSV"
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy CSV
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={copyAsJSON}
+                title="Copy selected rows as JSON"
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy JSON
+              </Button>
+              {selectedRowCount < totalRowCount && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => table.toggleAllRowsSelected(true)}
+                  title="Select all rows"
+                >
+                  <CheckSquare className="h-3 w-3 mr-1" />
+                  Select All
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setRowSelection({})}
+                title="Clear selection"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
       {/* Table */}
       <div
@@ -274,7 +431,10 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
               return (
                 <tr
                   key={row.id}
-                  className="border border-gray-700 hover:bg-gray-700/50"
+                  className={cn(
+                    "border border-gray-700 hover:bg-gray-700/50 transition-colors",
+                    row.getIsSelected() && "bg-primary/10 border-primary/30"
+                  )}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
