@@ -45,15 +45,16 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - [x] layout direction toggle button
   - [x] CMD+K button in header
 - [x] make table area horizontally scrollable
+- [x] remove height constraints from results table (takes up all available space)
+- [x] global search across all columns in results
+- [x] full-screen results mode with keyboard shortcut (Cmd+Shift+F)
+- [x] improved editor styling (custom Monaco theme matching app colors)
 
-### Priority Features 
+### Priority Features
 - [ ] multi-row selection & manipulation
 - [ ] inline data editing
-- [ ] search & filter within results (beyond current column filters)
 - [ ] better git integration (commit, push, pull in app) - **currently placeholder in sidebar footer**
 - [ ] snippet-style tabbing for query templates (e.g., UPDATE users SET $1 WHERE $2)
-- [ ] full-screen results mode
-- [ ] results table should take up all available space
 
 ### Future Features
 - [ ] ERD (entity relationship diagram)

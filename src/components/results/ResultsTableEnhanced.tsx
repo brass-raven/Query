@@ -18,7 +18,8 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { EyeOff } from "lucide-react";
+import { EyeOff, Search, X } from "lucide-react";
+import { Input } from "../ui/input";
 import type { QueryResult } from '../../types';
 
 interface ResultsTableEnhancedProps {
@@ -30,6 +31,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [globalFilter, setGlobalFilter] = useState('');
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Transform data for TanStack Table
@@ -76,10 +78,12 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
       sorting,
       columnFilters,
       columnVisibility,
+      globalFilter,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -99,7 +103,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
     if (tableContainerRef.current) {
       tableContainerRef.current.scrollTop = 0;
     }
-  }, [columnFilters, sorting]);
+  }, [columnFilters, sorting, globalFilter]);
 
   if (!result) {
     return (
@@ -129,43 +133,86 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
       ? totalSize - (virtualRows[virtualRows.length - 1]?.end || 0)
       : 0;
 
+  const activeFilterCount = columnFilters.length + (globalFilter ? 1 : 0);
+
   return (
     <div className="rounded-lg border flex flex-col flex-1 min-h-0">
-      {/* Header with stats and column toggle */}
-      <div className="px-4 py-2 border-b flex items-center justify-between bg-muted/50">
-        <div className="text-xs text-muted-foreground">
-          {rows.length.toLocaleString()} rows • {result.execution_time_ms}ms
+      {/* Header with stats, search, and controls */}
+      <div className="px-4 py-2 border-b bg-muted/50 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            {rows.length.toLocaleString()} rows • {result.execution_time_ms}ms
+            {activeFilterCount > 0 && (
+              <span className="ml-2 text-primary">
+                ({activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active)
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setGlobalFilter('');
+                  setColumnFilters([]);
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-2">
+                  <EyeOff className="h-3 w-3" />
+                  <span className="text-xs">Columns</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => {
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize text-xs"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      >
+                        {column.id}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 gap-2">
-              <EyeOff className="h-3 w-3" />
-              <span className="text-xs">Columns</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize text-xs"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Global search */}
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search all columns..."
+            value={globalFilter ?? ''}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="h-7 pl-7 pr-7 text-xs"
+          />
+          {globalFilter && (
+            <button
+              onClick={() => setGlobalFilter('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       </div>
       {/* Table */}
       <div
         ref={tableContainerRef}
-        className={`overflow-auto ${compact ? "max-h-64" : "max-h-96"} border-b`}
+        className="overflow-auto flex-1"
       >
         <table className="w-full text-sm border-collapse">
           <thead className="bg-background sticky top-0 z-10">

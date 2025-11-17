@@ -24,6 +24,8 @@ import {
   Unlock,
   LayoutGrid,
   Command,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { SqlEditor } from "./components/editor/SqlEditor";
 import { ResultsTableEnhanced } from "./components/results/ResultsTableEnhanced";
@@ -54,6 +56,7 @@ export default function AppNew() {
   const [showSettings, setShowSettings] = useState(false);
   const [vimMode, setVimMode] = useState(false);
   const [compactView, setCompactView] = useState(false);
+  const [fullScreenResults, setFullScreenResults] = useState(false);
   const [readOnlyMode, setReadOnlyMode] = useState(false);
   const [layoutDirection, setLayoutDirection] = useState<
     "vertical" | "horizontal"
@@ -173,6 +176,11 @@ export default function AppNew() {
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         e.preventDefault();
         setShowSettings((prev) => !prev);
+      }
+      // Cmd+Shift+F: Toggle full-screen results
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "F") {
+        e.preventDefault();
+        setFullScreenResults((prev) => !prev);
       }
     };
 
@@ -674,65 +682,69 @@ export default function AppNew() {
           {/* Main Content with Resizable Panels */}
           <div className="flex-1 overflow-hidden">
             <ResizablePanelGroup direction={layoutDirection}>
-              {/* SQL Editor Panel */}
-              <ResizablePanel defaultSize={50} minSize={30}>
-                <div className="flex h-full flex-col min-h-0">
-                  <div className="flex items-center justify-between border-b px-4 py-2">
-                    <h3 className="text-sm font-medium">Query Editor</h3>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant={vimMode ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setVimMode(!vimMode)}
-                        title="Toggle Vim mode"
-                      >
-                        <span className="text-xs font-mono">VIM</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowSaveModal(true)}
-                        title="Save Query"
-                      >
-                        <Save className="h-3 w-3 mr-1" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={runQuery}
-                        disabled={loading}
-                        className="gap-2"
-                        title="Run Query"
-                      >
-                        <Play className="h-3 w-3" />
-                      </Button>
+              {/* SQL Editor Panel - Hidden in full-screen mode */}
+              {!fullScreenResults && (
+                <>
+                  <ResizablePanel defaultSize={50} minSize={30}>
+                    <div className="flex h-full flex-col min-h-0">
+                      <div className="flex items-center justify-between border-b px-4 py-2">
+                        <h3 className="text-sm font-medium">Query Editor</h3>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant={vimMode ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setVimMode(!vimMode)}
+                            title="Toggle Vim mode"
+                          >
+                            <span className="text-xs font-mono">VIM</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowSaveModal(true)}
+                            title="Save Query"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={runQuery}
+                            disabled={loading}
+                            className="gap-2"
+                            title="Run Query"
+                          >
+                            <Play className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <SqlEditor
+                          value={query}
+                          onChange={setQuery}
+                          onRunQuery={runQuery}
+                          schema={schema}
+                          onEditorReady={(insertAt, insertSnip) => {
+                            setInsertAtCursor(() => insertAt);
+                            setInsertSnippet(() => insertSnip);
+                          }}
+                          vimMode={vimMode}
+                        />
+                      </div>
+                      {status && (
+                        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
+                          {status}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex-1">
-                    <SqlEditor
-                      value={query}
-                      onChange={setQuery}
-                      onRunQuery={runQuery}
-                      schema={schema}
-                      onEditorReady={(insertAt, insertSnip) => {
-                        setInsertAtCursor(() => insertAt);
-                        setInsertSnippet(() => insertSnip);
-                      }}
-                      vimMode={vimMode}
-                    />
-                  </div>
-                  {status && (
-                    <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-                      {status}
-                    </div>
-                  )}
-                </div>
-              </ResizablePanel>
+                  </ResizablePanel>
 
-              <ResizableHandle withHandle />
+                  <ResizableHandle withHandle />
+                </>
+              )}
 
               {/* Results Panel */}
-              <ResizablePanel defaultSize={50} minSize={30}>
-                <div className="flex h-full flex-col">
+              <ResizablePanel defaultSize={fullScreenResults ? 100 : 50} minSize={30}>
+                <div className="flex h-full flex-col min-h-0">
                   <div className="flex items-center justify-between border-b px-4 py-2">
                     <h3 className="text-sm font-medium">Results</h3>
                     {result && (
@@ -743,6 +755,18 @@ export default function AppNew() {
                         <Badge variant="secondary">
                           {result.execution_time_ms}ms
                         </Badge>
+                        <Button
+                          variant={fullScreenResults ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setFullScreenResults(!fullScreenResults)}
+                          title="Toggle full-screen results (Cmd+Shift+F)"
+                        >
+                          {fullScreenResults ? (
+                            <Minimize className="h-3 w-3" />
+                          ) : (
+                            <Maximize className="h-3 w-3" />
+                          )}
+                        </Button>
                         <Button
                           variant={compactView ? "default" : "outline"}
                           size="sm"
@@ -772,13 +796,10 @@ export default function AppNew() {
                       </div>
                     )}
                   </div>
-                  <ScrollArea className="flex-1">
-                      <ResultsTableEnhanced
-                        result={result}
-                        compact={compactView}
-                      />
-                    <ScrollBar orientation="vertical" />
-                  </ScrollArea>
+                  <ResultsTableEnhanced
+                    result={result}
+                    compact={compactView}
+                  />
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
