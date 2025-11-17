@@ -130,7 +130,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
       : 0;
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg border flex flex-col flex-1 min-h-0">
       {/* Header with stats and column toggle */}
       <div className="px-4 py-2 border-b flex items-center justify-between bg-muted/50">
         <div className="text-xs text-muted-foreground">
@@ -165,7 +165,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({ result,
       {/* Table */}
       <div
         ref={tableContainerRef}
-        className={`overflow-auto ${compact ? "max-h-64" : "max-h-96"}`}
+        className={`overflow-auto ${compact ? "max-h-64" : "max-h-96"} border-b`}
       >
         <table className="w-full text-sm border-collapse">
           <thead className="bg-background sticky top-0 z-10">

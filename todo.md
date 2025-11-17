@@ -29,8 +29,6 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 - [x] speed (when having a lot of lines, the app is slow, need to optimize and lazy load the results)
 - [x] export/import (CSV and JSON)
 - [x] show vim mode in ui (already implemented but cannot see)
-
-### Recently Completed (2025-01-16)
 - [x] settings page with Cmd+, shortcut (4 tabs: General, Editor, Display, Connections)
 - [x] update command palette to use shadcn Command component
 - [x] read only mode implementation with backend enforcement (only SELECT, DESCRIBE, DESC, SHOW, EXPLAIN)
@@ -48,12 +46,14 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - [x] CMD+K button in header
 - [x] make table area horizontally scrollable
 
-### Priority Features (Next to Implement)
+### Priority Features 
 - [ ] multi-row selection & manipulation
 - [ ] inline data editing
 - [ ] search & filter within results (beyond current column filters)
 - [ ] better git integration (commit, push, pull in app) - **currently placeholder in sidebar footer**
 - [ ] snippet-style tabbing for query templates (e.g., UPDATE users SET $1 WHERE $2)
+- [ ] full-screen results mode
+- [ ] results table should take up all available space
 
 ### Future Features
 - [ ] ERD (entity relationship diagram)

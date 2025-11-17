@@ -676,7 +676,7 @@ export default function AppNew() {
             <ResizablePanelGroup direction={layoutDirection}>
               {/* SQL Editor Panel */}
               <ResizablePanel defaultSize={50} minSize={30}>
-                <div className="flex h-full flex-col">
+                <div className="flex h-full flex-col min-h-0">
                   <div className="flex items-center justify-between border-b px-4 py-2">
                     <h3 className="text-sm font-medium">Query Editor</h3>
                     <div className="flex items-center gap-2">
@@ -773,12 +773,10 @@ export default function AppNew() {
                     )}
                   </div>
                   <ScrollArea className="flex-1">
-                    <div className="p-4">
                       <ResultsTableEnhanced
                         result={result}
                         compact={compactView}
                       />
-                    </div>
                     <ScrollBar orientation="vertical" />
                   </ScrollArea>
                 </div>
