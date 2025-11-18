@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
   SidebarProvider,
   SidebarInset,
@@ -197,6 +199,22 @@ export default function AppNew() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Listen for menu events to reveal project directory
+  useEffect(() => {
+    const unlisten = listen("reveal-project-directory", async () => {
+      try {
+        const path = currentProjectPath || `${await invoke<string>("get_app_dir")}/.query`;
+        await revealItemInDir(path);
+      } catch (error) {
+        console.error("Failed to reveal project directory:", error);
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [currentProjectPath]);
 
   const loadCurrentProjectPath = useCallback(async () => {
     try {

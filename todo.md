@@ -88,9 +88,10 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - (moving things into the same rows: results row, edit row on another line, selected meta data on another row, but this could all be moved into one row.)
   - 3 instances of same thing: # rows & time to execute query
 - [x] ERD (entity relationship diagram)
+- [x] ability in top menu to open the current project directory
 
 ### Priority Features
-- [ ] ability in top menu to open the current project directory
+- [ ] show recent projects in project selector dropdown (a project is a directory)
 
 ### Future Features
 - [ ] schema comparison (dev, staging, prod) - see detailed mockup below
@@ -102,6 +103,7 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 
 ### Low Priority
 - [ ] cancel query (abort long-running queries)
+- [ ] break out large files to separate files
 
 ---
 

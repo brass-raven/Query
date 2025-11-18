@@ -6,6 +6,10 @@ mod utils;
 
 // Re-export commands for Tauri
 use commands::*;
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
+    Emitter,
+};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -15,6 +19,39 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            // Create "Open Project Directory..." menu item
+            let open_project = MenuItemBuilder::new("Open Project Directory...")
+                .id("open_project")
+                .accelerator("CmdOrCtrl+Shift+O")
+                .build(app)?;
+
+            // Create File submenu
+            let file_submenu = SubmenuBuilder::new(app, "File")
+                .item(&open_project)
+                .separator()
+                .item(&PredefinedMenuItem::close_window(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::quit(app, None)?)
+                .build()?;
+
+            // Build complete menu
+            let menu = MenuBuilder::new(app)
+                .item(&file_submenu)
+                .build()?;
+
+            app.set_menu(menu)?;
+
+            // Handle menu item clicks
+            app.on_menu_event(move |app, event| {
+                if event.id() == "open_project" {
+                    // Emit event to frontend to reveal project directory
+                    let _ = app.emit("reveal-project-directory", ());
+                }
+            });
+
+            Ok(())
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![

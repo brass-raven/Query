@@ -1,6 +1,6 @@
 {
-  "name": "query",
-  "private": true,
+  "name": "Query",
+  "private": false,
   "version": "0.1.0",
   "type": "module",
   "scripts": {

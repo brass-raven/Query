@@ -23,10 +23,12 @@ import {
   Edit3,
   Trash2,
   Folder,
+  FolderOpen,
 } from "lucide-react";
 import type { ConnectionConfig } from "../../types";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -116,6 +118,15 @@ export const Settings = memo(function Settings({
     }
   }, [onProjectPathChange]);
 
+  const handleRevealProjectDirectory = useCallback(async () => {
+    try {
+      const path = currentProjectPath || `${await invoke<string>("get_app_dir")}/.query`;
+      await revealItemInDir(path);
+    } catch (error) {
+      console.error("Failed to reveal project directory:", error);
+    }
+  }, [currentProjectPath]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[80vh]">
@@ -159,6 +170,14 @@ export const Settings = memo(function Settings({
                           readOnly
                           className="flex-1 font-mono text-xs"
                         />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRevealProjectDirectory}
+                          title="Reveal in Finder"
+                        >
+                          <FolderOpen className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
