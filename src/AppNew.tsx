@@ -362,9 +362,7 @@ export default function AppNew() {
       });
 
       setResult(queryResult);
-      setStatus(
-        `Query executed successfully - ${queryResult.row_count} rows in ${queryResult.execution_time_ms}ms`,
-      );
+      setStatus("Query executed successfully");
 
       // Save to history
       await invoke("save_query_to_history", {
@@ -604,7 +602,7 @@ export default function AppNew() {
 
         <SidebarInset className="flex flex-col">
           {/* Header */}
-          <header className="flex h-14 items-center gap-3 border-b px-4">
+          <header className="flex h-12 items-center gap-3 border-b px-4">
             {/* Left side */}
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-6" />
@@ -748,12 +746,6 @@ export default function AppNew() {
                     <h3 className="text-sm font-medium">Results</h3>
                     {result && (
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {result.row_count} rows
-                        </Badge>
-                        <Badge variant="secondary">
-                          {result.execution_time_ms}ms
-                        </Badge>
                         <Button
                           variant={fullScreenResults ? "default" : "outline"}
                           size="sm"

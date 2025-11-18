@@ -396,9 +396,10 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
   return (
     <div className="rounded-lg border flex flex-col flex-1 min-h-0">
       {/* Header with stats, search, and controls */}
-      <div className="px-4 py-2 border-b bg-muted/50 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
+      <div className="px-4 py-2 border-b bg-muted/50">
+        <div className="flex items-center gap-3">
+          {/* Stats */}
+          <div className="text-xs text-muted-foreground whitespace-nowrap">
             {rows.length.toLocaleString()} rows • {result.execution_time_ms}ms
             {activeFilterCount > 0 && (
               <span className="ml-2 text-primary">
@@ -406,7 +407,29 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Global search */}
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search all columns..."
+              value={globalFilter ?? ''}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="h-7 pl-7 pr-7 text-xs"
+            />
+            {globalFilter && (
+              <button
+                onClick={() => setGlobalFilter('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 ml-auto">
             {activeFilterCount > 0 && (
               <Button
                 variant="ghost"
@@ -478,25 +501,6 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-        {/* Global search */}
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search all columns..."
-            value={globalFilter ?? ''}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="h-7 pl-7 pr-7 text-xs"
-          />
-          {globalFilter && (
-            <button
-              onClick={() => setGlobalFilter('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
         </div>
 
         {/* Selection action bar - only shown when rows are selected */}
