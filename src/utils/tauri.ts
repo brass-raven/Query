@@ -45,21 +45,21 @@ export async function saveConnectionPassword(
   connectionName: string,
   password: string
 ): Promise<void> {
-  await invoke("save_connection_password", { connectionName, password });
+  await invoke("save_connection_password", { name: connectionName, password });
 }
 
 export async function getConnectionPassword(
   connectionName: string
 ): Promise<string | null> {
   return await invoke<string | null>("get_connection_password", {
-    connectionName,
+    name: connectionName,
   });
 }
 
 export async function deleteConnectionPassword(
   connectionName: string
 ): Promise<void> {
-  await invoke("delete_connection_password", { connectionName });
+  await invoke("delete_connection_password", { name: connectionName });
 }
 
 // Query History

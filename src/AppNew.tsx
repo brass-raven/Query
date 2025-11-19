@@ -3,6 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
+  saveConnectionPassword,
+  getConnectionPassword,
+  deleteConnectionPassword,
+} from "./utils/tauri";
+import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger,
@@ -127,9 +132,7 @@ export default function AppNew() {
 
           if (lastConn) {
             // Load password from keychain (or use empty string if no password)
-            const password = await invoke<string | null>("get_connection_password", {
-              name: lastConnectionName,
-            });
+            const password = await getConnectionPassword(lastConnectionName);
 
             console.log("Password retrieved:", password ? "yes" : "no (using empty string)");
 
@@ -314,12 +317,8 @@ export default function AppNew() {
     async (connection: ConnectionConfig) => {
       try {
         // Save password to keychain if provided
-        console.log('connection password is:', connection.password);
         if (connection.password) {
-          await invoke("save_connection_password", {
-            name: connection.name,
-            password: connection.password,
-          });
+          await saveConnectionPassword(connection.name, connection.password);
         }
 
         // Add or update connection in list
@@ -353,7 +352,7 @@ export default function AppNew() {
         const updated = connections.filter((c) => c.name !== name);
 
         // Delete from keychain
-        await invoke("delete_connection_password", { name });
+        await deleteConnectionPassword(name);
 
         // Delete from JSON
         await invoke("save_connections", { connections: updated });
@@ -366,9 +365,19 @@ export default function AppNew() {
     [connections],
   );
 
-  const handleEditConnection = useCallback((connection: ConnectionConfig) => {
-    setEditingConnection(connection);
-    setShowConnectionModal(true);
+  const handleEditConnection = useCallback(async (connection: ConnectionConfig) => {
+    // Fetch password from keychain
+    try {
+      const password = await getConnectionPassword(connection.name);
+      const connWithPassword = { ...connection, password: password || "" };
+      setEditingConnection(connWithPassword);
+      setShowConnectionModal(true);
+    } catch (err) {
+      console.error('Error retrieving password from keychain:', err);
+      // Still open modal but without password
+      setEditingConnection(connection);
+      setShowConnectionModal(true);
+    }
   }, []);
 
   const runQuery = useCallback(async () => {
@@ -494,7 +503,11 @@ export default function AppNew() {
 
     const conn = connections.find((c) => c.name === value);
     if (conn) {
-      setConfig(conn);
+      // Fetch password from keychain
+      const password = await getConnectionPassword(conn.name);
+      const connWithPassword = { ...conn, password: password || "" };
+
+      setConfig(connWithPassword);
       // Set read-only mode based on connection setting
       setReadOnlyMode(conn.readOnly || false);
       // Auto-connect when switching connections
@@ -502,7 +515,7 @@ export default function AppNew() {
       setStatus("");
       try {
         const result = await invoke<string>("test_postgres_connection", {
-          config: conn,
+          config: connWithPassword,
         });
         setStatus(result);
         setConnected(true);
@@ -510,13 +523,13 @@ export default function AppNew() {
 
         // Load available schemas
         const schemas = await invoke<string[]>("get_database_schemas", {
-          config: conn,
+          config: connWithPassword,
         });
         setAvailableSchemas(schemas);
 
         // Load schema after successful connection (default to 'public')
         const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
-          config: conn,
+          config: connWithPassword,
           schema: "public",
         });
         setSchema(dbSchema);
