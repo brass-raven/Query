@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SchemaComparison, TableDifference } from "../../types";
+import { DIFF_STATUS, WARNING_SEVERITY } from "../../constants";
 import { Checkbox } from "../ui/checkbox";
 import {
   Collapsible,
@@ -47,17 +48,17 @@ export function ObjectSelectionTree({
   const selectAll = () => {
     const allChanges = new Set<string>();
     comparison.table_differences.forEach((table) => {
-      if (table.status !== "identical") {
+      if (table.status !== DIFF_STATUS.IDENTICAL) {
         allChanges.add(`table:${table.table_name}`);
       }
     });
     comparison.view_differences.forEach((view) => {
-      if (view.status !== "identical") {
+      if (view.status !== DIFF_STATUS.IDENTICAL) {
         allChanges.add(`view:${view.view_name}`);
       }
     });
     comparison.routine_differences.forEach((routine) => {
-      if (routine.status !== "identical") {
+      if (routine.status !== DIFF_STATUS.IDENTICAL) {
         allChanges.add(`routine:${routine.routine_name}`);
       }
     });
@@ -70,22 +71,22 @@ export function ObjectSelectionTree({
 
   const filteredTables = comparison.table_differences.filter((table) => {
     if (filterMode === "all") return true;
-    if (filterMode === "differences") return table.status !== "identical";
+    if (filterMode === "differences") return table.status !== DIFF_STATUS.IDENTICAL;
     const hasHighRiskWarning = comparison.warnings.some(
-      (w) => w.severity === "high" && w.affected_object === table.table_name
+      (w) => w.severity === WARNING_SEVERITY.HIGH && w.affected_object === table.table_name
     );
     return hasHighRiskWarning;
   });
 
   const filteredViews = comparison.view_differences.filter((view) => {
     if (filterMode === "all") return true;
-    if (filterMode === "differences") return view.status !== "identical";
+    if (filterMode === "differences") return view.status !== DIFF_STATUS.IDENTICAL;
     return false;
   });
 
   const filteredRoutines = comparison.routine_differences.filter((routine) => {
     if (filterMode === "all") return true;
-    if (filterMode === "differences") return routine.status !== "identical";
+    if (filterMode === "differences") return routine.status !== DIFF_STATUS.IDENTICAL;
     return false;
   });
 
@@ -133,7 +134,7 @@ export function ObjectSelectionTree({
                     onCheckedChange={() =>
                       toggleSelection(`table:${table.table_name}`)
                     }
-                    disabled={table.status === "identical"}
+                    disabled={table.status === DIFF_STATUS.IDENTICAL}
                   />
 
                   <CollapsibleTrigger className="flex items-center gap-2 flex-1">
@@ -153,14 +154,14 @@ export function ObjectSelectionTree({
 
                 <CollapsibleContent className="ml-8 mt-1 space-y-1">
                   {/* Column Changes */}
-                  {table.column_changes.filter((c) => c.status !== "identical")
+                  {table.column_changes.filter((c) => c.status !== DIFF_STATUS.IDENTICAL)
                     .length > 0 && (
                     <div className="space-y-1">
                       <div className="text-xs font-medium text-muted-foreground">
                         Column Changes:
                       </div>
                       {table.column_changes
-                        .filter((c) => c.status !== "identical")
+                        .filter((c) => c.status !== DIFF_STATUS.IDENTICAL)
                         .map((col, idx) => (
                           <div
                             key={idx}
@@ -182,14 +183,14 @@ export function ObjectSelectionTree({
 
                   {/* Index Changes */}
                   {table.index_changes &&
-                    table.index_changes.filter((i) => i.status !== "identical")
+                    table.index_changes.filter((i) => i.status !== DIFF_STATUS.IDENTICAL)
                       .length > 0 && (
                       <div className="space-y-1 mt-2">
                         <div className="text-xs font-medium text-muted-foreground">
                           Index Changes:
                         </div>
                         {table.index_changes
-                          .filter((i) => i.status !== "identical")
+                          .filter((i) => i.status !== DIFF_STATUS.IDENTICAL)
                           .map((idx, i) => (
                             <div
                               key={i}
@@ -204,14 +205,14 @@ export function ObjectSelectionTree({
 
                   {/* Foreign Key Changes */}
                   {table.fk_changes &&
-                    table.fk_changes.filter((f) => f.status !== "identical")
+                    table.fk_changes.filter((f) => f.status !== DIFF_STATUS.IDENTICAL)
                       .length > 0 && (
                       <div className="space-y-1 mt-2">
                         <div className="text-xs font-medium text-muted-foreground">
                           Foreign Key Changes:
                         </div>
                         {table.fk_changes
-                          .filter((f) => f.status !== "identical")
+                          .filter((f) => f.status !== DIFF_STATUS.IDENTICAL)
                           .map((fk, i) => (
                             <div
                               key={i}
@@ -248,7 +249,7 @@ export function ObjectSelectionTree({
               <Checkbox
                 checked={selectedChanges.has(`view:${view.view_name}`)}
                 onCheckedChange={() => toggleSelection(`view:${view.view_name}`)}
-                disabled={view.status === "identical"}
+                disabled={view.status === DIFF_STATUS.IDENTICAL}
               />
               <span className="font-mono text-sm">{view.view_name}</span>
               <StatusIndicator status={view.status} />
@@ -277,7 +278,7 @@ export function ObjectSelectionTree({
                 onCheckedChange={() =>
                   toggleSelection(`routine:${routine.routine_name}`)
                 }
-                disabled={routine.status === "identical"}
+                disabled={routine.status === DIFF_STATUS.IDENTICAL}
               />
               <span className="font-mono text-sm">{routine.routine_name}</span>
               <StatusIndicator status={routine.status} />
@@ -300,7 +301,7 @@ export function ObjectSelectionTree({
 }
 
 function StatusIndicator({ status }: { status: string }) {
-  if (status === "added") {
+  if (status === DIFF_STATUS.ADDED) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-green-400">
         <CheckCircle2 className="h-3 w-3" />
@@ -308,7 +309,7 @@ function StatusIndicator({ status }: { status: string }) {
       </span>
     );
   }
-  if (status === "removed") {
+  if (status === DIFF_STATUS.REMOVED) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-red-400">
         <XCircle className="h-3 w-3" />
@@ -316,7 +317,7 @@ function StatusIndicator({ status }: { status: string }) {
       </span>
     );
   }
-  if (status === "modified") {
+  if (status === DIFF_STATUS.MODIFIED) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-yellow-400">
         <MinusCircle className="h-3 w-3" />
@@ -334,15 +335,15 @@ function StatusIndicator({ status }: { status: string }) {
 function getTableSummary(table: TableDifference): string {
   const changes: string[] = [];
 
-  const colChanges = table.column_changes.filter((c) => c.status !== "identical").length;
+  const colChanges = table.column_changes.filter((c) => c.status !== DIFF_STATUS.IDENTICAL).length;
   if (colChanges > 0) changes.push(`${colChanges} column${colChanges > 1 ? "s" : ""}`);
 
   const idxChanges =
-    table.index_changes?.filter((i) => i.status !== "identical").length || 0;
+    table.index_changes?.filter((i) => i.status !== DIFF_STATUS.IDENTICAL).length || 0;
   if (idxChanges > 0) changes.push(`${idxChanges} index${idxChanges > 1 ? "es" : ""}`);
 
   const fkChanges =
-    table.fk_changes?.filter((f) => f.status !== "identical").length || 0;
+    table.fk_changes?.filter((f) => f.status !== DIFF_STATUS.IDENTICAL).length || 0;
   if (fkChanges > 0) changes.push(`${fkChanges} FK${fkChanges > 1 ? "s" : ""}`);
 
   return changes.length > 0 ? changes.join(", ") : table.status;

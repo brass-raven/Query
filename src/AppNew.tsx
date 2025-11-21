@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { DEFAULTS, UI_LAYOUT } from "./constants";
 import {
   saveConnectionPassword,
   getConnectionPassword,
@@ -94,7 +95,7 @@ export default function AppNew() {
 
   const [connected, setConnected] = useState(false);
   const connectedRef = useRef(false);
-  const [query, setQuery] = useState("SELECT * FROM users LIMIT 100;");
+  const [query, setQuery] = useState(`SELECT * FROM users LIMIT ${DEFAULTS.QUERY_LIMIT};`);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -256,7 +257,7 @@ export default function AppNew() {
   const loadQueryHistory = useCallback(async () => {
     try {
       const hist = await invoke<QueryHistoryEntry[]>("get_query_history", {
-        limit: 20,
+        limit: DEFAULTS.HISTORY_LIMIT,
       });
       setHistory(hist);
     } catch (error) {
@@ -448,7 +449,7 @@ export default function AppNew() {
   ]);
 
   const handleTableClick = useCallback((tableName: string) => {
-    setQuery(`SELECT * FROM ${tableName} LIMIT 100;`);
+    setQuery(`SELECT * FROM ${tableName} LIMIT ${DEFAULTS.QUERY_LIMIT};`);
   }, []);
 
   const handleTableInsert = useCallback((tableName: string) => {
@@ -876,7 +877,7 @@ export default function AppNew() {
               {/* SQL Editor Panel - Hidden in full-screen mode */}
               {!fullScreenResults && (
                 <>
-                  <ResizablePanel defaultSize={50} minSize={30}>
+                  <ResizablePanel defaultSize={UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                     <div className="flex h-full flex-col min-h-0">
                       <div className="flex items-center justify-between border-b px-4 py-2">
                         <h3 className="text-sm font-medium">Query Editor</h3>
@@ -934,7 +935,7 @@ export default function AppNew() {
               )}
 
               {/* Results Panel */}
-              <ResizablePanel defaultSize={fullScreenResults ? 100 : 50} minSize={30}>
+              <ResizablePanel defaultSize={fullScreenResults ? 100 : UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                 <div className="flex h-full flex-col min-h-0">
                   <div className="flex items-center justify-between border-b px-4 py-2">
                     <h3 className="text-sm font-medium">{showErd ? "ERD" : "Results"}</h3>

@@ -1,6 +1,7 @@
 import type { ComparisonWarning } from "../../types";
 import { AlertTriangle, AlertCircle, Info } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { WARNING_SEVERITY } from "../../constants";
 
 interface WarningsPanelProps {
   warnings: ComparisonWarning[];
@@ -10,9 +11,9 @@ export function WarningsPanel({ warnings }: WarningsPanelProps) {
   console.log("WarningsPanel - Received warnings:", warnings);
   console.log("WarningsPanel - Warnings count:", warnings.length);
 
-  const highRiskWarnings = warnings.filter((w) => w.severity === "high");
-  const mediumRiskWarnings = warnings.filter((w) => w.severity === "medium");
-  const lowRiskWarnings = warnings.filter((w) => w.severity === "low");
+  const highRiskWarnings = warnings.filter((w) => w.severity === WARNING_SEVERITY.HIGH);
+  const mediumRiskWarnings = warnings.filter((w) => w.severity === WARNING_SEVERITY.MEDIUM);
+  const lowRiskWarnings = warnings.filter((w) => w.severity === WARNING_SEVERITY.LOW);
 
   console.log("High risk:", highRiskWarnings.length, "Medium:", mediumRiskWarnings.length, "Low:", lowRiskWarnings.length);
 
@@ -60,7 +61,7 @@ export function WarningsPanel({ warnings }: WarningsPanelProps) {
           </div>
           <div className="space-y-2 pl-7">
             {highRiskWarnings.map((warning, idx) => (
-              <WarningCard key={idx} warning={warning} severity="high" />
+              <WarningCard key={idx} warning={warning} severity={WARNING_SEVERITY.HIGH} />
             ))}
           </div>
         </div>
@@ -75,7 +76,7 @@ export function WarningsPanel({ warnings }: WarningsPanelProps) {
           </div>
           <div className="space-y-2 pl-7">
             {mediumRiskWarnings.map((warning, idx) => (
-              <WarningCard key={idx} warning={warning} severity="medium" />
+              <WarningCard key={idx} warning={warning} severity={WARNING_SEVERITY.MEDIUM} />
             ))}
           </div>
         </div>
@@ -90,7 +91,7 @@ export function WarningsPanel({ warnings }: WarningsPanelProps) {
           </div>
           <div className="space-y-2 pl-7">
             {lowRiskWarnings.map((warning, idx) => (
-              <WarningCard key={idx} warning={warning} severity="low" />
+              <WarningCard key={idx} warning={warning} severity={WARNING_SEVERITY.LOW} />
             ))}
           </div>
         </div>
@@ -158,7 +159,7 @@ function WarningCard({
       )}
 
       {/* Additional context based on warning type */}
-      {severity === "high" && (
+      {severity === WARNING_SEVERITY.HIGH && (
         <div className="flex items-start gap-2 text-xs mt-3 pt-3 border-t border-red-500/30">
           <AlertTriangle className="h-3.5 w-3.5 text-red-400 mt-0.5" />
           <div className="text-muted-foreground">
@@ -172,7 +173,7 @@ function WarningCard({
         </div>
       )}
 
-      {severity === "medium" && (
+      {severity === WARNING_SEVERITY.MEDIUM && (
         <div className="flex items-start gap-2 text-xs mt-3 pt-3 border-t border-yellow-500/30">
           <AlertCircle className="h-3.5 w-3.5 text-yellow-400 mt-0.5" />
           <div className="text-muted-foreground">

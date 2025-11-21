@@ -1,4 +1,5 @@
 import { useState, memo } from "react";
+import { WARNING_SEVERITY } from "../../constants";
 import {
   Dialog,
   DialogContent,
@@ -328,9 +329,9 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
                     >
                       <div className="flex items-start gap-3">
                         <AlertTriangle className={`w-5 h-5 mt-0.5 ${
-                          warning.severity === "high"
+                          warning.severity === WARNING_SEVERITY.HIGH
                             ? "text-red-500"
-                            : warning.severity === "medium"
+                            : warning.severity === WARNING_SEVERITY.MEDIUM
                             ? "text-yellow-500"
                             : "text-blue-500"
                         }`} />

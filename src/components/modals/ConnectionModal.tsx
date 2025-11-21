@@ -14,6 +14,7 @@ import { Checkbox } from "../ui/checkbox";
 import { Badge } from "../ui/badge";
 import type { ConnectionConfig } from "../../types";
 import { invoke } from "@tauri-apps/api/core";
+import { DEFAULT_CONNECTION } from "../../constants";
 
 interface ConnectionModalProps {
   isOpen: boolean;
@@ -22,15 +23,8 @@ interface ConnectionModalProps {
   initialConnection?: ConnectionConfig | null;
 }
 
-const DEFAULT_CONNECTION: ConnectionConfig = {
-  name: "",
-  host: "localhost",
-  port: 5432,
-  database: "",
-  username: "",
-  password: "",
-  readOnly: false,
-};
+// DEFAULT_CONNECTION is imported from constants
+// Note: The imported constant uses "New Connection" for name and "querytest" for database
 
 export const ConnectionModal = memo(function ConnectionModal({
   isOpen,
@@ -135,7 +129,7 @@ export const ConnectionModal = memo(function ConnectionModal({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {initialConnection ? "Edit Connection" : "New Connection"}
+            {initialConnection ? "Edit Connection" : DEFAULT_CONNECTION.name || "New Connection"}
           </DialogTitle>
           <DialogDescription>
             Configure your PostgreSQL database connection. Password will be
@@ -195,7 +189,7 @@ export const ConnectionModal = memo(function ConnectionModal({
               <Label htmlFor="host">Host *</Label>
               <Input
                 id="host"
-                placeholder="localhost"
+                placeholder={DEFAULT_CONNECTION.host}
                 value={config.host}
                 onChange={(e) =>
                   setConfig({ ...config, host: e.target.value })
@@ -207,10 +201,10 @@ export const ConnectionModal = memo(function ConnectionModal({
               <Input
                 id="port"
                 type="number"
-                placeholder="5432"
+                placeholder={DEFAULT_CONNECTION.port.toString()}
                 value={config.port}
                 onChange={(e) =>
-                  setConfig({ ...config, port: parseInt(e.target.value) || 5432 })
+                  setConfig({ ...config, port: parseInt(e.target.value) || DEFAULT_CONNECTION.port })
                 }
               />
             </div>
@@ -220,7 +214,7 @@ export const ConnectionModal = memo(function ConnectionModal({
             <Label htmlFor="database">Database *</Label>
             <Input
               id="database"
-              placeholder="postgres"
+              placeholder={DEFAULT_CONNECTION.username}
               value={config.database}
               onChange={(e) =>
                 setConfig({ ...config, database: e.target.value })
@@ -232,7 +226,7 @@ export const ConnectionModal = memo(function ConnectionModal({
             <Label htmlFor="username">Username *</Label>
             <Input
               id="username"
-              placeholder="postgres"
+              placeholder={DEFAULT_CONNECTION.username}
               value={config.username}
               onChange={(e) =>
                 setConfig({ ...config, username: e.target.value })

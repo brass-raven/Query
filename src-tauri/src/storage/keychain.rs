@@ -1,7 +1,8 @@
 use keyring::Entry;
+use crate::constants::KEYCHAIN_SERVICE_NAME;
 
 pub fn save_password_to_keychain(connection_name: &str, password: &str) -> Result<(), String> {
-    let entry = Entry::new("Query", connection_name)
+    let entry = Entry::new(KEYCHAIN_SERVICE_NAME, connection_name)
         .map_err(|e| format!("Failed to create keychain entry: {}", e))?;
 
     entry
@@ -12,7 +13,7 @@ pub fn save_password_to_keychain(connection_name: &str, password: &str) -> Resul
 }
 
 pub fn get_password_from_keychain(connection_name: &str) -> Result<Option<String>, String> {
-    let entry = Entry::new("Query", connection_name)
+    let entry = Entry::new(KEYCHAIN_SERVICE_NAME, connection_name)
         .map_err(|e| format!("Failed to create keychain entry: {}", e))?;
 
     match entry.get_password() {
@@ -23,7 +24,7 @@ pub fn get_password_from_keychain(connection_name: &str) -> Result<Option<String
 }
 
 pub fn delete_password_from_keychain(connection_name: &str) -> Result<(), String> {
-    let entry = Entry::new("Query", connection_name)
+    let entry = Entry::new(KEYCHAIN_SERVICE_NAME, connection_name)
         .map_err(|e| format!("Failed to create keychain entry: {}", e))?;
 
     match entry.delete_credential() {

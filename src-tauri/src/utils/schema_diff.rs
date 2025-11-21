@@ -2,6 +2,7 @@ use crate::models::{
     EnhancedColumnInfo, EnhancedDatabaseSchema, EnhancedTableInfo, ForeignKeyInfo, IndexInfo,
     RoutineInfo, ViewInfo,
 };
+use crate::constants::{WARNING_TYPE_DATA_LOSS, WARNING_TYPE_BREAKING_CHANGE, SQL_NULLABLE_YES};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -524,7 +525,7 @@ fn generate_warnings(
         if matches!(table_diff.status, DiffStatus::Removed) {
             warnings.push(ComparisonWarning {
                 severity: WarningSeverity::High,
-                warning_type: "data_loss".to_string(),
+                warning_type: WARNING_TYPE_DATA_LOSS.to_string(),
                 message: format!("Dropping table '{}' will result in data loss", table_diff.table_name),
                 affected_object: table_diff.table_name.clone(),
                 details: Some("Consider backing up data before proceeding".to_string()),
@@ -536,7 +537,7 @@ fn generate_warnings(
             if matches!(col_change.status, DiffStatus::Removed) {
                 warnings.push(ComparisonWarning {
                     severity: WarningSeverity::High,
-                    warning_type: "data_loss".to_string(),
+                    warning_type: WARNING_TYPE_DATA_LOSS.to_string(),
                     message: format!(
                         "Dropping column '{}.{}' will result in data loss",
                         table_diff.table_name, col_change.column_name
@@ -551,7 +552,7 @@ fn generate_warnings(
                 if col_change.changes.iter().any(|c| c.starts_with("type:")) {
                     warnings.push(ComparisonWarning {
                         severity: WarningSeverity::Medium,
-                        warning_type: "breaking_change".to_string(),
+                        warning_type: WARNING_TYPE_BREAKING_CHANGE.to_string(),
                         message: format!(
                             "Changing data type for column '{}.{}' may cause issues",
                             table_diff.table_name, col_change.column_name
@@ -613,7 +614,7 @@ pub fn generate_migration_script(comparison: &SchemaComparison) -> String {
                 match col_change.status {
                     DiffStatus::Added => {
                         if let Some(target_def) = &col_change.target_definition {
-                            let nullable = if target_def.is_nullable == "YES" {
+                            let nullable = if target_def.is_nullable == SQL_NULLABLE_YES {
                                 "NULL"
                             } else {
                                 "NOT NULL"
@@ -656,7 +657,7 @@ pub fn generate_migration_script(comparison: &SchemaComparison) -> String {
                                 .iter()
                                 .any(|c| c.starts_with("nullable:"))
                             {
-                                let nullable_clause = if target_def.is_nullable == "YES" {
+                                let nullable_clause = if target_def.is_nullable == SQL_NULLABLE_YES {
                                     "DROP NOT NULL"
                                 } else {
                                     "SET NOT NULL"
@@ -787,7 +788,7 @@ pub fn generate_migration_script(comparison: &SchemaComparison) -> String {
                 .iter()
                 .filter_map(|col| {
                     if let Some(target_def) = &col.target_definition {
-                        let nullable = if target_def.is_nullable == "YES" {
+                        let nullable = if target_def.is_nullable == SQL_NULLABLE_YES {
                             "NULL"
                         } else {
                             "NOT NULL"

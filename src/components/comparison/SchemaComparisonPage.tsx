@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WARNING_SEVERITY } from "../../constants";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Label } from "../ui/label";
@@ -104,7 +105,7 @@ export function SchemaComparisonPage({
   };
 
   const getConflictCount = () => {
-    return comparison?.warnings.filter((w) => w.severity === "high").length || 0;
+    return comparison?.warnings.filter((w) => w.severity === WARNING_SEVERITY.HIGH).length || 0;
   };
 
   return (

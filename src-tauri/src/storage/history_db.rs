@@ -1,8 +1,9 @@
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::str::FromStr;
+use crate::constants::HISTORY_DB_FILENAME;
 
 pub async fn get_history_db(app_dir: std::path::PathBuf) -> Result<SqlitePool, String> {
-    let db_path = app_dir.join("history.db");
+    let db_path = app_dir.join(HISTORY_DB_FILENAME);
 
     let options = SqliteConnectOptions::from_str(&format!("sqlite:{}", db_path.display()))
         .map_err(|e| format!("Failed to create options: {}", e))?

@@ -1,4 +1,5 @@
 use crate::models::ConnectionConfig;
+use crate::constants::CONNECTIONS_FILENAME;
 use std::fs;
 use std::path::PathBuf;
 
@@ -6,7 +7,7 @@ pub fn save_connections(
     connections: Vec<ConnectionConfig>,
     app_dir: PathBuf,
 ) -> Result<(), String> {
-    let connections_file = app_dir.join("connections.json");
+    let connections_file = app_dir.join(CONNECTIONS_FILENAME);
 
     let json = serde_json::to_string(&connections)
         .map_err(|e| format!("Could not serialize connections: {}", e))?;
@@ -18,7 +19,7 @@ pub fn save_connections(
 }
 
 pub fn load_connections(app_dir: PathBuf) -> Result<Vec<ConnectionConfig>, String> {
-    let connections_file = app_dir.join("connections.json");
+    let connections_file = app_dir.join(CONNECTIONS_FILENAME);
 
     if !connections_file.exists() {
         return Ok(Vec::new());

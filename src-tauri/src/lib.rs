@@ -1,5 +1,6 @@
 // Module declarations
 mod commands;
+mod constants;
 mod models;
 mod storage;
 mod utils;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SchemaComparison, TableDifference } from "../../types";
+import { DIFF_STATUS, WARNING_SEVERITY } from "../../constants";
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,10 +29,10 @@ export function DiffViewer({ comparison, filterMode }: DiffViewerProps) {
 
   const filteredTables = comparison.table_differences.filter((table) => {
     if (filterMode === "all") return true;
-    if (filterMode === "differences") return table.status !== "identical";
+    if (filterMode === "differences") return table.status !== DIFF_STATUS.IDENTICAL;
     // conflicts mode: only tables with high-risk warnings
     const hasHighRiskWarning = (comparison.warnings || []).some(
-      (w) => w.severity === "high" && w.affected_object === table.table_name
+      (w) => w.severity === WARNING_SEVERITY.HIGH && w.affected_object === table.table_name
     );
     return hasHighRiskWarning;
   });
@@ -69,7 +70,7 @@ export function DiffViewer({ comparison, filterMode }: DiffViewerProps) {
               <StatusBadge status={table.status} />
               {table.column_changes.length > 0 && (
                 <span className="text-xs text-muted-foreground ml-auto">
-                  {table.column_changes.filter((c) => c.status !== "identical").length} column changes
+                  {table.column_changes.filter((c) => c.status !== DIFF_STATUS.IDENTICAL).length} column changes
                 </span>
               )}
             </div>
@@ -90,7 +91,7 @@ export function DiffViewer({ comparison, filterMode }: DiffViewerProps) {
               <div className="grid grid-cols-2 divide-x">
                 {/* Source DDL */}
                 <div className="p-4 font-mono text-sm space-y-1">
-                  {table.status === "removed" ? (
+                  {table.status === DIFF_STATUS.REMOVED ? (
                     <div className="text-muted-foreground italic">
                       [Will be deleted]
                     </div>
@@ -107,7 +108,7 @@ export function DiffViewer({ comparison, filterMode }: DiffViewerProps) {
 
                 {/* Target DDL */}
                 <div className="p-4 font-mono text-sm space-y-1">
-                  {table.status === "added" ? (
+                  {table.status === DIFF_STATUS.ADDED ? (
                     <div className="text-muted-foreground italic">
                       [New table - will be created]
                     </div>
@@ -124,12 +125,12 @@ export function DiffViewer({ comparison, filterMode }: DiffViewerProps) {
               </div>
 
               {/* Column Changes Summary */}
-              {table.column_changes.filter((c) => c.status !== "identical").length > 0 && (
+              {table.column_changes.filter((c) => c.status !== DIFF_STATUS.IDENTICAL).length > 0 && (
                 <div className="border-t p-4 bg-muted/10">
                   <div className="text-sm font-medium mb-2">Changes Detected:</div>
                   <ul className="text-sm space-y-1 text-muted-foreground">
                     {table.column_changes
-                      .filter((c) => c.status !== "identical")
+                      .filter((c) => c.status !== DIFF_STATUS.IDENTICAL)
                       .map((change, idx) => (
                         <li key={idx} className="flex items-start gap-2">
                           <StatusIcon status={change.status} />
@@ -179,7 +180,7 @@ function renderColumnDiff(table: TableDifference, side: "source" | "target") {
     let bgClass = "";
     let textClass = "";
 
-    if (change.status === "added") {
+    if (change.status === DIFF_STATUS.ADDED) {
       if (side === "target") {
         bgClass = "bg-green-500/20";
         textClass = "text-green-400";
@@ -194,7 +195,7 @@ function renderColumnDiff(table: TableDifference, side: "source" | "target") {
           </div>
         );
       }
-    } else if (change.status === "removed") {
+    } else if (change.status === DIFF_STATUS.REMOVED) {
       if (side === "source") {
         bgClass = "bg-red-500/20";
         textClass = "text-red-400";
@@ -208,7 +209,7 @@ function renderColumnDiff(table: TableDifference, side: "source" | "target") {
           </div>
         );
       }
-    } else if (change.status === "modified") {
+    } else if (change.status === DIFF_STATUS.MODIFIED) {
       bgClass = "bg-yellow-500/20";
       textClass = "text-yellow-400";
     }
@@ -276,13 +277,13 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === "added") {
+  if (status === DIFF_STATUS.ADDED) {
     return <span className="text-green-400">+</span>;
   }
-  if (status === "removed") {
+  if (status === DIFF_STATUS.REMOVED) {
     return <span className="text-red-400">-</span>;
   }
-  if (status === "modified") {
+  if (status === DIFF_STATUS.MODIFIED) {
     return <span className="text-yellow-400">~</span>;
   }
   return <span className="text-gray-400">•</span>;
