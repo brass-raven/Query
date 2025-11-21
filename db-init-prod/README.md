@@ -12,7 +12,7 @@ This directory contains SQL scripts for the **production** database that run aut
 
 **Connection String:**
 ```
-postgresql://queryuser:querypass@localhost:5433/querydb_prod
+postgres://queryuser:querypass@localhost:5433/querydb_prod
 ```
 
 ## Tables Created

@@ -90,11 +90,22 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 - [x] ERD (entity relationship diagram)
 - [x] ability in top menu to open the current project directory
 - [x] show recent projects in project selector dropdown (a project is a directory)
+- [x] schema comparison (dev, staging, prod)
+  - [x] Enhanced schema fetching (tables, columns, indexes, foreign keys, views, routines)
+  - [x] Full comparison logic with diff detection
+  - [x] Migration SQL script generation
+  - [x] UI with summary, table details, warnings, and script viewer
+  - [x] GitCompareArrows button in header to open comparison modal
 
 ### Priority Features
+- [ ] app pages should have header (sidebar and compare page)
+- [ ] schema comparison better view
+  - warnings do not show up in the UI
+- [ ] remove unused files
+- [ ] remove random "invoke" calls and have a centralized area for all tauri calls
+- [ ] remove magic vars
 
 ### Future Features
-- [ ] schema comparison (dev, staging, prod) - see detailed mockup below
 - [ ] robust table manipulation (create, alter, drop tables from UI)
 - [ ] variables system, e.g. ${1:text} in the query editor then have a variable editor to edit them.
 - [ ] other database types:
@@ -105,6 +116,8 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 - [ ] cancel query (abort long-running queries)
 - [ ] break out large files to separate files
 - [ ] general refactoring and cleanup
+- [ ] github action workflow for building and publishing
+- [ ] db url parse not allowing to paste in.
 
 ---
 

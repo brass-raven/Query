@@ -10,6 +10,7 @@ import {
 } from "../ui/command";
 import { Database, History as HistoryIcon, Search } from "lucide-react";
 import type { DatabaseSchema, QueryHistoryEntry } from "../../types";
+import { DEFAULTS, UI_LAYOUT } from "../../constants";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -47,8 +48,8 @@ export const CommandPalette = memo(function CommandPalette({
       commands.push({
         id: `select-${tableName}`,
         label: `SELECT ${tableName}`,
-        description: `Select all from ${tableName} (limit 100)`,
-        query: `SELECT * FROM ${tableName} LIMIT 100;`,
+        description: `Select all from ${tableName} (limit ${DEFAULTS.QUERY_LIMIT})`,
+        query: `SELECT * FROM ${tableName} LIMIT ${DEFAULTS.QUERY_LIMIT};`,
         category: "table",
         icon: <Database className="h-4 w-4" />,
       });
@@ -113,11 +114,11 @@ ORDER BY ordinal_position;`,
   }
 
   // Add recent queries from history
-  history.slice(0, 5).forEach((entry) => {
+  history.slice(0, DEFAULTS.RECENT_HISTORY_LIMIT).forEach((entry) => {
     commands.push({
       id: `history-${entry.id}`,
       label:
-        entry.query.substring(0, 60) + (entry.query.length > 60 ? "..." : ""),
+        entry.query.substring(0, UI_LAYOUT.QUERY_PREVIEW_LENGTH) + (entry.query.length > UI_LAYOUT.QUERY_PREVIEW_LENGTH ? "..." : ""),
       description: `${entry.row_count} rows in ${entry.execution_time_ms}ms`,
       query: entry.query,
       category: "history",

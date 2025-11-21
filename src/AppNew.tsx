@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { DEFAULTS, UI_LAYOUT } from "./constants";
 import {
   saveConnectionPassword,
   getConnectionPassword,
@@ -42,6 +43,7 @@ import {
   Plus,
   Database,
   Folder,
+  GitCompareArrows,
 } from "lucide-react";
 import { SqlEditor } from "./components/editor/SqlEditor";
 import { ResultsTableEnhanced } from "./components/results/ResultsTableEnhanced";
@@ -51,6 +53,7 @@ import { CommandPalette } from "./components/modals/CommandPalette";
 import { ProjectSettings } from "./components/modals/ProjectSettings";
 import { ConnectionModal } from "./components/modals/ConnectionModal";
 import { Settings } from "./components/modals/Settings";
+import { SchemaComparisonPage } from "./components/comparison/SchemaComparisonPage";
 import type {
   DatabaseSchema,
   ConnectionConfig,
@@ -72,6 +75,7 @@ export default function AppNew() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSchemaComparison, setShowSchemaComparison] = useState(false);
   const [vimMode, setVimMode] = useState(false);
   const [compactView, setCompactView] = useState(false);
   const [fullScreenResults, setFullScreenResults] = useState(false);
@@ -91,7 +95,7 @@ export default function AppNew() {
 
   const [connected, setConnected] = useState(false);
   const connectedRef = useRef(false);
-  const [query, setQuery] = useState("SELECT * FROM users LIMIT 100;");
+  const [query, setQuery] = useState(`SELECT * FROM users LIMIT ${DEFAULTS.QUERY_LIMIT};`);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -253,7 +257,7 @@ export default function AppNew() {
   const loadQueryHistory = useCallback(async () => {
     try {
       const hist = await invoke<QueryHistoryEntry[]>("get_query_history", {
-        limit: 20,
+        limit: DEFAULTS.HISTORY_LIMIT,
       });
       setHistory(hist);
     } catch (error) {
@@ -445,7 +449,7 @@ export default function AppNew() {
   ]);
 
   const handleTableClick = useCallback((tableName: string) => {
-    setQuery(`SELECT * FROM ${tableName} LIMIT 100;`);
+    setQuery(`SELECT * FROM ${tableName} LIMIT ${DEFAULTS.QUERY_LIMIT};`);
   }, []);
 
   const handleTableInsert = useCallback((tableName: string) => {
@@ -656,6 +660,16 @@ export default function AppNew() {
     URL.revokeObjectURL(link.href);
   }, [result]);
 
+  // Render full-page schema comparison if active
+  if (showSchemaComparison) {
+    return (
+      <SchemaComparisonPage
+        connections={connections}
+        onClose={() => setShowSchemaComparison(false)}
+      />
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
@@ -839,6 +853,15 @@ export default function AppNew() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => setShowSchemaComparison(true)}
+                className="h-7 w-7"
+                title="Compare Schemas"
+              >
+                <GitCompareArrows className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowSettings(true)}
                 className="h-7 w-7"
                 title="Settings (⌘,)"
@@ -854,7 +877,7 @@ export default function AppNew() {
               {/* SQL Editor Panel - Hidden in full-screen mode */}
               {!fullScreenResults && (
                 <>
-                  <ResizablePanel defaultSize={50} minSize={30}>
+                  <ResizablePanel defaultSize={UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                     <div className="flex h-full flex-col min-h-0">
                       <div className="flex items-center justify-between border-b px-4 py-2">
                         <h3 className="text-sm font-medium">Query Editor</h3>
@@ -912,7 +935,7 @@ export default function AppNew() {
               )}
 
               {/* Results Panel */}
-              <ResizablePanel defaultSize={fullScreenResults ? 100 : 50} minSize={30}>
+              <ResizablePanel defaultSize={fullScreenResults ? 100 : UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                 <div className="flex h-full flex-col min-h-0">
                   <div className="flex items-center justify-between border-b px-4 py-2">
                     <h3 className="text-sm font-medium">{showErd ? "ERD" : "Results"}</h3>
@@ -1030,6 +1053,7 @@ export default function AppNew() {
         onSave={handleSaveConnection}
         initialConnection={editingConnection}
       />
+
     </SidebarProvider>
   );
 }

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use crate::constants::{APP_DIR_NAME, SETTINGS_FILENAME};
 
 // Global state for current project path
 pub static PROJECT_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
@@ -23,7 +24,7 @@ pub fn get_app_dir() -> Result<PathBuf, String> {
     } else {
         dirs::home_dir()
             .ok_or("Could not find home directory")?
-            .join(".query")
+            .join(APP_DIR_NAME)
     };
 
     fs::create_dir_all(&app_dir).map_err(|e| format!("Could not create app directory: {}", e))?;
@@ -45,11 +46,11 @@ pub fn set_project_path_internal(path: String) -> Result<(), String> {
     // Load existing settings and update project_path
     let default_dir = dirs::home_dir()
         .ok_or("Could not find home directory")?
-        .join(".query");
+        .join(APP_DIR_NAME);
     fs::create_dir_all(&default_dir)
         .map_err(|e| format!("Could not create default directory: {}", e))?;
 
-    let settings_file = default_dir.join("settings.json");
+    let settings_file = default_dir.join(SETTINGS_FILENAME);
     let mut settings = load_settings_json(&settings_file)?;
     settings["project_path"] = serde_json::json!(project_path.to_string_lossy().to_string());
 
@@ -75,9 +76,9 @@ pub fn get_current_project_path_internal() -> Result<Option<String>, String> {
 pub fn load_project_settings_internal() -> Result<(), String> {
     let default_dir = dirs::home_dir()
         .ok_or("Could not find home directory")?
-        .join(".query");
+        .join(APP_DIR_NAME);
 
-    let settings_file = default_dir.join("settings.json");
+    let settings_file = default_dir.join(SETTINGS_FILENAME);
 
     if settings_file.exists() {
         let data = fs::read_to_string(&settings_file)
@@ -110,10 +111,10 @@ fn load_settings_json(settings_file: &PathBuf) -> Result<serde_json::Value, Stri
 fn get_settings_file() -> Result<PathBuf, String> {
     let default_dir = dirs::home_dir()
         .ok_or("Could not find home directory")?
-        .join(".query");
+        .join(APP_DIR_NAME);
     fs::create_dir_all(&default_dir)
         .map_err(|e| format!("Could not create default directory: {}", e))?;
-    Ok(default_dir.join("settings.json"))
+    Ok(default_dir.join(SETTINGS_FILENAME))
 }
 
 pub fn set_last_connection_internal(connection_name: String) -> Result<(), String> {

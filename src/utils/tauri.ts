@@ -2,12 +2,14 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   ConnectionConfig,
   DatabaseSchema,
+  EnhancedDatabaseSchema,
   QueryResult,
   QueryHistoryEntry,
   SavedQuery,
   GitStatus,
   GitCommit,
   RecentProject,
+  SchemaComparison,
 } from "../types";
 
 // Connection Management
@@ -18,9 +20,35 @@ export async function testPostgresConnection(
 }
 
 export async function getDatabaseSchema(
-  config: ConnectionConfig
+  config: ConnectionConfig,
+  schema?: string
 ): Promise<DatabaseSchema> {
-  return await invoke<DatabaseSchema>("get_database_schema", { config });
+  return await invoke<DatabaseSchema>("get_database_schema", { config, schema });
+}
+
+export async function getEnhancedDatabaseSchema(
+  config: ConnectionConfig,
+  schema?: string
+): Promise<EnhancedDatabaseSchema> {
+  return await invoke<EnhancedDatabaseSchema>("get_enhanced_database_schema", { config, schema });
+}
+
+export async function compareSchemas(
+  sourceConfig: ConnectionConfig,
+  targetConfig: ConnectionConfig,
+  schema?: string
+): Promise<SchemaComparison> {
+  return await invoke<SchemaComparison>("compare_schemas", {
+    sourceConfig,
+    targetConfig,
+    schema
+  });
+}
+
+export async function generateMigrationSql(
+  comparison: SchemaComparison
+): Promise<string> {
+  return await invoke<string>("generate_migration_sql", { comparison });
 }
 
 export async function executeQuery(

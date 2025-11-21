@@ -1,10 +1,12 @@
+mod comparison;
 mod connection;
 mod git;
 mod history;
 mod saved_queries;
 mod settings;
 
-pub use connection::{execute_query, get_database_schema, get_database_schemas, test_postgres_connection};
+pub use comparison::{compare_schemas, generate_migration_sql};
+pub use connection::{execute_query, get_database_schema, get_database_schemas, test_postgres_connection, get_enhanced_database_schema};
 pub use git::{check_git_repo, get_git_log, get_git_status, git_commit, git_init, git_pull, git_push};
 pub use history::{clear_query_history, get_query_history, save_query_to_history};
 pub use saved_queries::{delete_saved_query, get_saved_queries, save_query, toggle_pin_query};
