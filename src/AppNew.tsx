@@ -1,12 +1,32 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { DEFAULTS, UI_LAYOUT } from "./constants";
+import { DEFAULTS, UI_LAYOUT, READ_ONLY_COMMANDS, ERROR_MESSAGES, MACOS_TITLEBAR_LEFT_PADDING } from "./constants";
 import {
   saveConnectionPassword,
   getConnectionPassword,
   deleteConnectionPassword,
+  testPostgresConnection,
+  getDatabaseSchema,
+  getDatabaseSchemas,
+  executeQuery,
+  loadConnections,
+  saveConnections,
+  getQueryHistory,
+  saveQueryToHistory,
+  clearQueryHistory,
+  getSavedQueries,
+  saveQuery,
+  deleteSavedQuery,
+  togglePinQuery,
+  getCurrentProjectPath,
+  setProjectPath,
+  getAppDir,
+  getAutoConnectEnabled,
+  getLastConnection,
+  setLastConnection,
+  getRecentProjects,
+  loadProjectSettings,
 } from "./utils/tauri";
 import {
   SidebarProvider,
@@ -109,7 +129,7 @@ export default function AppNew() {
   useEffect(() => {
     async function initialize() {
       try {
-        await invoke("load_project_settings");
+        await loadProjectSettings();
       } catch (error) {
         console.error("Failed to load project settings:", error);
       }
@@ -122,14 +142,14 @@ export default function AppNew() {
 
       // Check if auto-connect is enabled
       try {
-        const autoConnectEnabled = await invoke<boolean>("get_auto_connect_enabled");
-        const lastConnectionName = await invoke<string | null>("get_last_connection");
+        const autoConnectEnabled = await getAutoConnectEnabled();
+        const lastConnectionName = await getLastConnection();
 
         console.log("Auto-connect check:", { autoConnectEnabled, lastConnectionName });
 
         if (autoConnectEnabled && lastConnectionName) {
           // Try to auto-connect
-          const savedConns = await invoke<ConnectionConfig[]>("load_connections");
+          const savedConns = await loadConnections();
           const lastConn = savedConns.find((c) => c.name === lastConnectionName);
 
           console.log("Found connection:", lastConn);
@@ -148,24 +168,17 @@ export default function AppNew() {
             // Auto-connect
             setLoading(true);
             try {
-              const result = await invoke<string>("test_postgres_connection", {
-                config: connWithPassword,
-              });
+              const result = await testPostgresConnection(connWithPassword);
               setStatus(`Auto-connected: ${result}`);
               setConnected(true);
               connectedRef.current = true;
 
               // Load available schemas
-              const schemas = await invoke<string[]>("get_database_schemas", {
-                config: connWithPassword,
-              });
+              const schemas = await getDatabaseSchemas(connWithPassword);
               setAvailableSchemas(schemas);
 
               // Load schema (default to 'public')
-              const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
-                config: connWithPassword,
-                schema: "public",
-              });
+              const dbSchema = await getDatabaseSchema(connWithPassword, "public");
               setSchema(dbSchema);
               setSelectedSchema("public");
             } catch (error) {
@@ -215,7 +228,7 @@ export default function AppNew() {
   useEffect(() => {
     const unlisten = listen("reveal-project-directory", async () => {
       try {
-        const path = currentProjectPath || `${await invoke<string>("get_app_dir")}/.query`;
+        const path = currentProjectPath || `${await getAppDir()}/.query`;
         await revealItemInDir(path);
       } catch (error) {
         console.error("Failed to reveal project directory:", error);
@@ -229,7 +242,7 @@ export default function AppNew() {
 
   const loadCurrentProjectPath = useCallback(async () => {
     try {
-      const path = await invoke<string | null>("get_current_project_path");
+      const path = await getCurrentProjectPath();
       setCurrentProjectPath(path);
     } catch (error) {
       console.error("Failed to load project path:", error);
@@ -238,7 +251,7 @@ export default function AppNew() {
 
   const loadRecentProjects = useCallback(async () => {
     try {
-      const projects = await invoke<RecentProject[]>("get_recent_projects");
+      const projects = await getRecentProjects();
       setRecentProjects(projects);
     } catch (error) {
       console.error("Failed to load recent projects:", error);
@@ -247,7 +260,7 @@ export default function AppNew() {
 
   const loadSavedConnections = useCallback(async () => {
     try {
-      const saved = await invoke<ConnectionConfig[]>("load_connections");
+      const saved = await loadConnections();
       setConnections(saved);
     } catch (error) {
       console.error("Failed to load connections:", error);
@@ -256,9 +269,7 @@ export default function AppNew() {
 
   const loadQueryHistory = useCallback(async () => {
     try {
-      const hist = await invoke<QueryHistoryEntry[]>("get_query_history", {
-        limit: DEFAULTS.HISTORY_LIMIT,
-      });
+      const hist = await getQueryHistory(DEFAULTS.HISTORY_LIMIT);
       setHistory(hist);
     } catch (error) {
       console.error("Failed to load history:", error);
@@ -267,7 +278,7 @@ export default function AppNew() {
 
   const loadSavedQueries = useCallback(async () => {
     try {
-      const queries = await invoke<SavedQuery[]>("get_saved_queries");
+      const queries = await getSavedQueries();
       setSavedQueries(queries);
     } catch (error) {
       console.error("Failed to load saved queries:", error);
@@ -277,11 +288,7 @@ export default function AppNew() {
   const handleSaveQuery = useCallback(
     async (name: string, description: string) => {
       try {
-        await invoke("save_query", {
-          name,
-          query,
-          description: description || null,
-        });
+        await saveQuery(name, query, description || null);
         await loadSavedQueries();
         setStatus(`Query "${name}" saved successfully`);
         setShowSaveModal(false);
@@ -295,7 +302,7 @@ export default function AppNew() {
   const handleDeleteSavedQuery = useCallback(
     async (id: number) => {
       try {
-        await invoke("delete_saved_query", { id });
+        await deleteSavedQuery(id);
         await loadSavedQueries();
         setStatus("Query deleted");
       } catch (error) {
@@ -308,7 +315,7 @@ export default function AppNew() {
   const handleTogglePin = useCallback(
     async (id: number) => {
       try {
-        await invoke("toggle_pin_query", { id });
+        await togglePinQuery(id);
         await loadSavedQueries();
       } catch (error) {
         setStatus(`Failed to toggle pin: ${error}`);
@@ -337,7 +344,7 @@ export default function AppNew() {
           updated = [...connections, { ...connection, password: "" }];
         }
 
-        await invoke("save_connections", { connections: updated });
+        await saveConnections(updated);
         setConnections(updated);
         setConfig(connection);
         setStatus(`Connection "${connection.name}" saved successfully`);
@@ -359,7 +366,7 @@ export default function AppNew() {
         await deleteConnectionPassword(name);
 
         // Delete from JSON
-        await invoke("save_connections", { connections: updated });
+        await saveConnections(updated);
         setConnections(updated);
         setStatus(`Connection "${name}" deleted`);
       } catch (error) {
@@ -398,11 +405,10 @@ export default function AppNew() {
     // Read-only mode validation
     if (readOnlyMode) {
       const trimmedQuery = query.trim().toUpperCase();
-      const allowedCommands = ['SELECT', 'DESCRIBE', 'DESC', 'SHOW', 'EXPLAIN'];
-      const isAllowed = allowedCommands.some(cmd => trimmedQuery.startsWith(cmd));
+      const isAllowed = READ_ONLY_COMMANDS.some(cmd => trimmedQuery.startsWith(cmd));
 
       if (!isAllowed) {
-        setStatus("Read-only mode: Only SELECT, DESCRIBE, and SHOW queries are allowed");
+        setStatus(ERROR_MESSAGES.READ_ONLY_MODE);
         return;
       }
     }
@@ -411,21 +417,18 @@ export default function AppNew() {
     setStatus("");
 
     try {
-      const queryResult = await invoke<QueryResult>("execute_query", {
-        config,
-        query,
-      });
+      const queryResult = await executeQuery(config, query);
 
       setResult(queryResult);
       setStatus("Query executed successfully");
 
       // Save to history
-      await invoke("save_query_to_history", {
+      await saveQueryToHistory(
         query,
-        connectionName: config.name,
-        executionTimeMs: queryResult.execution_time_ms,
-        rowCount: queryResult.row_count,
-      });
+        config.name,
+        queryResult.execution_time_ms,
+        queryResult.row_count
+      );
 
       await loadQueryHistory();
     } catch (error) {
@@ -490,7 +493,7 @@ export default function AppNew() {
 
   const handleClearHistory = useCallback(async () => {
     try {
-      await invoke("clear_query_history");
+      await clearQueryHistory();
       await loadQueryHistory();
       setStatus("History cleared");
     } catch (error) {
@@ -518,29 +521,22 @@ export default function AppNew() {
       setLoading(true);
       setStatus("");
       try {
-        const result = await invoke<string>("test_postgres_connection", {
-          config: connWithPassword,
-        });
+        const result = await testPostgresConnection(connWithPassword);
         setStatus(result);
         setConnected(true);
         connectedRef.current = true;
 
         // Load available schemas
-        const schemas = await invoke<string[]>("get_database_schemas", {
-          config: connWithPassword,
-        });
+        const schemas = await getDatabaseSchemas(connWithPassword);
         setAvailableSchemas(schemas);
 
         // Load schema after successful connection (default to 'public')
-        const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
-          config: connWithPassword,
-          schema: "public",
-        });
+        const dbSchema = await getDatabaseSchema(connWithPassword, "public");
         setSchema(dbSchema);
         setSelectedSchema("public");
 
         // Save as last connection for auto-connect
-        await invoke("set_last_connection", { connectionName: conn.name });
+        await setLastConnection(conn.name);
       } catch (error) {
         setStatus(`Connection failed: ${error}`);
         setConnected(false);
@@ -555,7 +551,7 @@ export default function AppNew() {
   const handleProjectChange = useCallback(async (path: string) => {
     try {
       // Set the new project path
-      await invoke("set_project_path", { path });
+      await setProjectPath(path);
 
       // Update current project path
       setCurrentProjectPath(path);
@@ -594,10 +590,7 @@ export default function AppNew() {
     setLoading(true);
 
     try {
-      const dbSchema = await invoke<DatabaseSchema>("get_database_schema", {
-        config,
-        schema: schemaName,
-      });
+      const dbSchema = await getDatabaseSchema(config, schemaName);
       setSchema(dbSchema);
       setStatus(`Loaded schema: ${schemaName}`);
     } catch (error) {
@@ -695,7 +688,8 @@ export default function AppNew() {
           {/* Header */}
           <header
             data-tauri-drag-region
-            className="flex h-9 items-center gap-2 border-b px-3 pl-[72px]"
+            className="flex h-9 items-center gap-2 border-b px-3"
+            style={{ paddingLeft: `${MACOS_TITLEBAR_LEFT_PADDING}px` }}
           >
             {/* Left side */}
             <div data-tauri-drag-region="false">

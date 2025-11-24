@@ -26,6 +26,12 @@ export async function getDatabaseSchema(
   return await invoke<DatabaseSchema>("get_database_schema", { config, schema });
 }
 
+export async function getDatabaseSchemas(
+  config: ConnectionConfig
+): Promise<string[]> {
+  return await invoke<string[]>("get_database_schemas", { config });
+}
+
 export async function getEnhancedDatabaseSchema(
   config: ConnectionConfig,
   schema?: string
@@ -155,6 +161,26 @@ export async function getRecentProjects(): Promise<RecentProject[]> {
 
 export async function removeRecentProject(path: string): Promise<void> {
   await invoke("remove_recent_project", { path });
+}
+
+export async function getAppDir(): Promise<string> {
+  return await invoke<string>("get_app_dir");
+}
+
+export async function getAutoConnectEnabled(): Promise<boolean> {
+  return await invoke<boolean>("get_auto_connect_enabled");
+}
+
+export async function setAutoConnectEnabled(enabled: boolean): Promise<void> {
+  await invoke("set_auto_connect_enabled", { enabled });
+}
+
+export async function getLastConnection(): Promise<string | null> {
+  return await invoke<string | null>("get_last_connection");
+}
+
+export async function setLastConnection(name: string): Promise<void> {
+  await invoke("set_last_connection", { name });
 }
 
 // Git Operations

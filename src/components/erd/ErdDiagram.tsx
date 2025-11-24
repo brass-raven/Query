@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import * as React from 'react';
 import {
   ReactFlow,
   Node,
@@ -12,6 +13,7 @@ import {
 } from '@xyflow/react';
 import dagre from 'dagre';
 import type { DatabaseSchema } from '../../types';
+import { TableNode } from './TableNode';
 import '@xyflow/react/dist/style.css';
 
 interface ErdDiagramProps {
@@ -23,13 +25,33 @@ const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
 const nodeWidth = 250;
-const nodeHeight = 40; // Base height per table
+const nodeHeightBase = 40; // Header height
+const nodeHeightPerColumn = 24; // Height per column row
+const maxVisibleColumns = 10; // Max columns to show before "more..."
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   dagreGraph.setGraph({ rankdir: 'TB', ranksep: 100, nodesep: 80 });
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    // Calculate dynamic height based on number of columns and expansion state
+    const data = node.data as any;
+    const totalColumns = data.columns?.length || 0;
+    const isExpanded = data.expanded || false;
+
+    let columnCount: number;
+    let extraRow = 0;
+
+    if (isExpanded) {
+      // Show all columns when expanded
+      columnCount = totalColumns;
+    } else {
+      // Show up to 10 columns when collapsed
+      columnCount = Math.min(totalColumns, maxVisibleColumns);
+      extraRow = totalColumns > maxVisibleColumns ? 1 : 0; // +1 for expand button
+    }
+
+    const height = nodeHeightBase + (columnCount * nodeHeightPerColumn) + (extraRow * nodeHeightPerColumn);
+    dagreGraph.setNode(node.id, { width: nodeWidth, height });
   });
 
   edges.forEach((edge) => {
@@ -40,18 +62,55 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   nodes.forEach((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
+    const data = node.data as any;
+    const totalColumns = data.columns?.length || 0;
+    const isExpanded = data.expanded || false;
+
+    let columnCount: number;
+    let extraRow = 0;
+
+    if (isExpanded) {
+      columnCount = totalColumns;
+    } else {
+      columnCount = Math.min(totalColumns, maxVisibleColumns);
+      extraRow = totalColumns > maxVisibleColumns ? 1 : 0;
+    }
+
+    const height = nodeHeightBase + (columnCount * nodeHeightPerColumn) + (extraRow * nodeHeightPerColumn);
     node.position = {
       x: nodeWithPosition.x - nodeWidth / 2,
-      y: nodeWithPosition.y - nodeHeight / 2,
+      y: nodeWithPosition.y - height / 2,
     };
   });
 
   return { nodes, edges };
 };
 
+// Define node types
+const nodeTypes = {
+  table: TableNode,
+};
+
 export function ErdDiagram({ schema }: ErdDiagramProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
+  const [expandedNodes, setExpandedNodes] = React.useState<Set<string>>(new Set());
+
+  // Memoize node types to prevent re-renders
+  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+
+  // Handle node expansion toggle
+  const handleToggleExpand = React.useCallback((tableName: string) => {
+    setExpandedNodes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(tableName)) {
+        newSet.delete(tableName);
+      } else {
+        newSet.add(tableName);
+      }
+      return newSet;
+    });
+  }, []);
 
   useEffect(() => {
     if (!schema || !schema.tables || schema.tables.length === 0) {
@@ -63,21 +122,14 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
     // Create nodes from tables
     const newNodes: Node[] = schema.tables.map((table) => ({
       id: table.table_name,
-      type: 'default',
+      type: 'table',
       data: {
         label: table.table_name,
+        columns: table.columns,
+        expanded: expandedNodes.has(table.table_name),
+        onToggleExpand: handleToggleExpand,
       },
       position: { x: 0, y: 0 },
-      style: {
-        background: '#18181b',
-        color: '#fafafa',
-        border: '1px solid #3f3f46',
-        borderRadius: '8px',
-        padding: '12px',
-        fontSize: '14px',
-        fontWeight: '600',
-        width: nodeWidth,
-      },
     }));
 
     // Create edges from foreign keys
@@ -124,7 +176,7 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [schema, setNodes, setEdges]);
+  }, [schema, expandedNodes, handleToggleExpand, setNodes, setEdges]);
 
   if (!schema || !schema.tables || schema.tables.length === 0) {
     return (
@@ -142,6 +194,7 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={memoizedNodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         connectionMode={ConnectionMode.Loose}

@@ -13,7 +13,7 @@ import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
 import { Badge } from "../ui/badge";
 import type { ConnectionConfig } from "../../types";
-import { invoke } from "@tauri-apps/api/core";
+import { testPostgresConnection } from "../../utils/tauri";
 import { DEFAULT_CONNECTION } from "../../constants";
 
 interface ConnectionModalProps {
@@ -99,9 +99,7 @@ export const ConnectionModal = memo(function ConnectionModal({
     setTestResult(null);
 
     try {
-      const result = await invoke<string>("test_postgres_connection", {
-        config,
-      });
+      const result = await testPostgresConnection(config);
       setTestResult({
         success: true,
         message: result,

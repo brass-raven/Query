@@ -57,3 +57,10 @@ export const SEVERITY_LABELS: Record<WarningSeverity, string> = {
   medium: "Medium",
   low: "Low",
 };
+
+// macOS UI dimensions
+export const MACOS_TITLEBAR_TOP_PADDING = 28; // Height for traffic light buttons
+export const MACOS_TITLEBAR_LEFT_PADDING = 72; // Left padding for traffic lights
+export const SIDEBAR_FOOTER_HEIGHT = 240; // Height reserved for sidebar footer
+export const GIT_STATUS_POLL_INTERVAL = 10000; // 10 seconds
+export const MESSAGE_AUTO_CLEAR_DELAY = 5000; // 5 seconds

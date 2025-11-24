@@ -50,6 +50,7 @@ import type {
 } from "../../types";
 import { getGitStatus, gitInit } from "../../utils/tauri";
 import { GitCommitModal } from "../modals/GitCommitModal";
+import { SIDEBAR_FOOTER_HEIGHT, GIT_STATUS_POLL_INTERVAL, MESSAGE_AUTO_CLEAR_DELAY } from "../../constants";
 
 interface AppSidebarProps {
   schema: DatabaseSchema | null;
@@ -145,17 +146,17 @@ export const AppSidebar = memo(function AppSidebar({
     };
 
     fetchGitStatus();
-    const interval = setInterval(fetchGitStatus, 10000);
+    const interval = setInterval(fetchGitStatus, GIT_STATUS_POLL_INTERVAL);
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-clear git messages after 5 seconds
+  // Auto-clear git messages
   useEffect(() => {
     if (gitError || gitSuccess) {
       const timer = setTimeout(() => {
         setGitError(null);
         setGitSuccess(null);
-      }, 5000);
+      }, MESSAGE_AUTO_CLEAR_DELAY);
       return () => clearTimeout(timer);
     }
   }, [gitError, gitSuccess]);
@@ -166,7 +167,7 @@ export const AppSidebar = memo(function AppSidebar({
   return (
     <Sidebar>
       <SidebarContent>
-        <ScrollArea className="h-[calc(100vh-240px)]">
+        <ScrollArea className={`h-[calc(100vh-${SIDEBAR_FOOTER_HEIGHT}px)]`}>
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>

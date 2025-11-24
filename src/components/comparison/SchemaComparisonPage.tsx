@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { WARNING_SEVERITY } from "../../constants";
+import { WARNING_SEVERITY, MACOS_TITLEBAR_TOP_PADDING } from "../../constants";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Label } from "../ui/label";
@@ -111,7 +111,7 @@ export function SchemaComparisonPage({
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b">
+      <header className="flex items-center justify-between px-6 py-4 border-b" style={{ paddingTop: `${MACOS_TITLEBAR_TOP_PADDING}px` }}>
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"

@@ -26,7 +26,7 @@ import { IndeterminateCheckbox } from "../ui/indeterminate-checkbox";
 import { cn } from "@/lib/utils";
 import type { QueryResult, ConnectionConfig, DatabaseSchema } from '../../types';
 import { EditableCell } from './EditableCell';
-import { invoke } from "@tauri-apps/api/core";
+import { executeQuery } from "../../utils/tauri";
 
 interface ResultsTableEnhancedProps {
   result: QueryResult | null;
@@ -154,7 +154,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
       for (const [rowIndex] of dirtyData.entries()) {
         const updateSQL = generateUpdateSQL(rowIndex, tableName, pkColumns);
         console.log('Executing UPDATE:', updateSQL);
-        await invoke('execute_query', { config, query: updateSQL });
+        await executeQuery(config, updateSQL);
         successCount++;
       }
 
