@@ -36,8 +36,22 @@ pub fn run() {
                 .item(&PredefinedMenuItem::quit(app, None)?)
                 .build()?;
 
+            // Create Edit submenu with standard shortcuts (required for clipboard on macOS)
+            let edit_submenu = SubmenuBuilder::new(app, "Edit")
+                .item(&PredefinedMenuItem::undo(app, None)?)
+                .item(&PredefinedMenuItem::redo(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::cut(app, None)?)
+                .item(&PredefinedMenuItem::copy(app, None)?)
+                .item(&PredefinedMenuItem::paste(app, None)?)
+                .item(&PredefinedMenuItem::select_all(app, None)?)
+                .build()?;
+
             // Build complete menu
-            let menu = MenuBuilder::new(app).item(&file_submenu).build()?;
+            let menu = MenuBuilder::new(app)
+                .item(&file_submenu)
+                .item(&edit_submenu)
+                .build()?;
 
             app.set_menu(menu)?;
 
@@ -53,6 +67,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             // Connection commands

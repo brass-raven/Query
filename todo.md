@@ -98,9 +98,10 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - [x] GitCompareArrows button in header to open comparison modal
 
 ### Priority Features
-- [ ] app pages should have header (sidebar and compare page)
-- [ ] schema comparison better view
-  - warnings do not show up in the UI
+- [ ] app pages should have space above them (sidebar and compare page)
+- [ ] paste functionality
+- [ ] ERD should have column
+- [ ] sidebar should be resizable
 - [ ] remove unused files
 - [ ] remove random "invoke" calls and have a centralized area for all tauri calls
 - [ ] remove magic vars
