@@ -27,6 +27,8 @@ import {
   setLastConnection,
   getRecentProjects,
   loadProjectSettings,
+  getVimModeEnabled,
+  setVimModeEnabled,
 } from "./utils/tauri";
 import {
   SidebarProvider,
@@ -139,6 +141,14 @@ export default function AppNew() {
       loadSavedQueries();
       loadCurrentProjectPath();
       loadRecentProjects();
+
+      // Load vim mode setting
+      try {
+        const vimEnabled = await getVimModeEnabled();
+        setVimMode(vimEnabled);
+      } catch (error) {
+        console.error("Failed to load vim mode setting:", error);
+      }
 
       // Check if auto-connect is enabled
       try {
@@ -879,7 +889,15 @@ export default function AppNew() {
                           <Button
                             variant={vimMode ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setVimMode(!vimMode)}
+                            onClick={async () => {
+                              const newVimMode = !vimMode;
+                              setVimMode(newVimMode);
+                              try {
+                                await setVimModeEnabled(newVimMode);
+                              } catch (error) {
+                                console.error("Failed to save vim mode setting:", error);
+                              }
+                            }}
                             title="Toggle Vim mode"
                           >
                             <span className="text-xs font-mono">VIM</span>
@@ -1008,6 +1026,7 @@ export default function AppNew() {
         onClose={() => setShowCommandPalette(false)}
         schema={schema}
         history={history}
+        savedQueries={savedQueries}
         onExecuteQuery={handleExecuteFromPalette}
       />
 

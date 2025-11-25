@@ -157,6 +157,26 @@ pub fn get_auto_connect_enabled_internal() -> Result<bool, String> {
     Ok(settings.get("auto_connect_enabled").and_then(|v| v.as_bool()).unwrap_or(false))
 }
 
+pub fn set_vim_mode_enabled_internal(enabled: bool) -> Result<(), String> {
+    let settings_file = get_settings_file()?;
+    let mut settings = load_settings_json(&settings_file)?;
+    settings["vim_mode_enabled"] = serde_json::json!(enabled);
+
+    fs::write(
+        settings_file,
+        serde_json::to_string_pretty(&settings).unwrap(),
+    )
+    .map_err(|e| format!("Could not write settings: {}", e))?;
+
+    Ok(())
+}
+
+pub fn get_vim_mode_enabled_internal() -> Result<bool, String> {
+    let settings_file = get_settings_file()?;
+    let settings = load_settings_json(&settings_file)?;
+    Ok(settings.get("vim_mode_enabled").and_then(|v| v.as_bool()).unwrap_or(false))
+}
+
 // Recent projects management
 
 const MAX_RECENT_PROJECTS: usize = 10;

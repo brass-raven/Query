@@ -96,18 +96,18 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
   - [x] Migration SQL script generation
   - [x] UI with summary, table details, warnings, and script viewer
   - [x] GitCompareArrows button in header to open comparison modal
-
-### Priority Features
-- [x] app pages should have space above them (sidebar and compare page)
-- [x] paste functionality (added Edit menu with clipboard shortcuts)
-- [x] ERD should have column (custom TableNode with expandable columns - shows 10 by default, click to expand all)
-- [ ] sidebar should be resizable
 - [x] remove unused files (verified App.css is in use, codebase is clean)
 - [x] remove random "invoke" calls and have a centralized area for all tauri calls (all centralized in utils/tauri.ts)
 - [x] remove magic vars (moved to constants/ui.ts and constants/sql.ts)
-- [ ] store vim mode in .query settings
-- [ ] cmd+k should show saved queries
-- [ ] cmd+k should have better query abilities, for example, when i say select user i should be able to say "where ..." and there should be autocomplete for the columns
+- [x] app pages should have space above them (sidebar and compare page)
+- [x] paste functionality (added Edit menu with clipboard shortcuts)
+- [x] ERD should have column (custom TableNode with expandable columns - shows 10 by default, click to expand all)
+
+### Priority Features
+- [x] sidebar should be resizable
+- [x] store vim mode in .query settings
+- [x] cmd+k should show saved queries
+- [x] cmd+k should have better query abilities, for example, when i say select user i should be able to say "where ..." and there should be autocomplete for the columns
 
 
 ### Future Features

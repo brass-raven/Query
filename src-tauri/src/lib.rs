@@ -97,6 +97,8 @@ pub fn run() {
             get_last_connection,
             set_auto_connect_enabled,
             get_auto_connect_enabled,
+            set_vim_mode_enabled,
+            get_vim_mode_enabled,
             get_recent_projects,
             remove_recent_project,
             // Connection storage commands

@@ -175,12 +175,20 @@ export async function setAutoConnectEnabled(enabled: boolean): Promise<void> {
   await invoke("set_auto_connect_enabled", { enabled });
 }
 
+export async function getVimModeEnabled(): Promise<boolean> {
+  return await invoke<boolean>("get_vim_mode_enabled");
+}
+
+export async function setVimModeEnabled(enabled: boolean): Promise<void> {
+  await invoke("set_vim_mode_enabled", { enabled });
+}
+
 export async function getLastConnection(): Promise<string | null> {
   return await invoke<string | null>("get_last_connection");
 }
 
 export async function setLastConnection(name: string): Promise<void> {
-  await invoke("set_last_connection", { name });
+  await invoke("set_last_connection", { connectionName: name });
 }
 
 // Git Operations

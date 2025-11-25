@@ -123,6 +123,8 @@ export const AppSidebar = memo(function AppSidebar({
   const [initializing, setInitializing] = useState(false);
   const [gitError, setGitError] = useState<string | null>(null);
   const [gitSuccess, setGitSuccess] = useState<string | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(256); // 16rem = 256px
+  const [isResizing, setIsResizing] = useState(false);
 
   const toggleTable = (tableName: string) => {
     const newExpanded = new Set(expandedTables);
@@ -133,6 +135,31 @@ export const AppSidebar = memo(function AppSidebar({
     }
     setExpandedTables(newExpanded);
   };
+
+  // Handle sidebar resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 200 && newWidth <= 500) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   // Fetch git status on mount and poll every 10 seconds
   useEffect(() => {
@@ -165,7 +192,8 @@ export const AppSidebar = memo(function AppSidebar({
   const unpinnedQueries = savedQueries.filter((q) => !q.is_pinned);
 
   return (
-    <Sidebar>
+    <div className="relative flex" style={{ width: `${sidebarWidth}px` }}>
+      <Sidebar style={{ width: `${sidebarWidth}px` }}>
       <SidebarContent>
         <ScrollArea className={`h-[calc(100vh-${SIDEBAR_FOOTER_HEIGHT}px)]`}>
           <SidebarGroup>
@@ -601,5 +629,11 @@ export const AppSidebar = memo(function AppSidebar({
         }}
       />
     </Sidebar>
+    <div
+      className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/50 transition-colors"
+      onMouseDown={() => setIsResizing(true)}
+      style={{ zIndex: 50 }}
+    />
+    </div>
   );
 });
