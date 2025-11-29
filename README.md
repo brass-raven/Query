@@ -26,6 +26,16 @@ Before running Query, ensure you have the following installed:
 
 **macOS:**
 - Xcode Command Line Tools: `xcode-select --install`
+- Install dependencies via Homebrew:
+  ```bash
+  # Install Bun (recommended) or Node.js
+  brew install bun
+  # Or: brew install node
+
+  # Install Rust (alternatively, use rustup)
+  brew install rust
+  # Or: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  ```
 
 **Linux:**
 - Development libraries:
