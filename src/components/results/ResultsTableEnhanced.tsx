@@ -10,6 +10,8 @@ import {
   ColumnFiltersState,
   VisibilityState,
   RowSelectionState,
+  CellContext,
+  Row,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "../ui/button";
@@ -27,6 +29,9 @@ import { cn } from "@/lib/utils";
 import type { QueryResult, ConnectionConfig, DatabaseSchema } from '../../types';
 import { EditableCell } from './EditableCell';
 import { executeQuery } from "../../utils/tauri";
+
+// Type for row data (dynamic column names)
+type RowData = Record<string, unknown>;
 
 interface ResultsTableEnhancedProps {
   result: QueryResult | null;
@@ -153,7 +158,6 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
       let successCount = 0;
       for (const [rowIndex] of dirtyData.entries()) {
         const updateSQL = generateUpdateSQL(rowIndex, tableName, pkColumns);
-        console.log('Executing UPDATE:', updateSQL);
         await executeQuery(config, updateSQL);
         successCount++;
       }
@@ -165,8 +169,6 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
       if (onRefresh) {
         await onRefresh();
       }
-
-      console.log(`Successfully updated ${successCount} row${successCount > 1 ? 's' : ''}`);
     } catch (error) {
       console.error('Error saving changes:', error);
     } finally {
@@ -175,10 +177,10 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
   };
 
   // Transform data for TanStack Table
-  const data = useMemo(() => {
+  const data = useMemo<RowData[]>(() => {
     if (!result) return [];
     return result.rows.map((row) => {
-      const obj: any = {};
+      const obj: RowData = {};
       result.columns.forEach((col, idx) => {
         obj[col] = row[idx];
       });
@@ -186,10 +188,10 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
     });
   }, [result]);
 
-  const columns = useMemo<ColumnDef<any>[]>(() => {
+  const columns = useMemo<ColumnDef<RowData>[]>(() => {
     if (!result) return [];
 
-    const selectColumn: ColumnDef<any> = {
+    const selectColumn: ColumnDef<RowData> = {
       id: 'select',
       header: ({ table }) => (
         <IndeterminateCheckbox
@@ -215,7 +217,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
     const dataColumns = result.columns.map((col) => ({
       accessorKey: col,
       header: col,
-      cell: (info: any) => {
+      cell: (info: CellContext<RowData, unknown>) => {
         const originalValue = info.getValue();
         const rowIndex = info.row.index;
         const columnId = info.column.id;
@@ -243,7 +245,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
         if (typeof value === "object") return JSON.stringify(value);
         return String(value);
       },
-      filterFn: (row: any, columnId: string, filterValue: any) => {
+      filterFn: (row: Row<RowData>, columnId: string, filterValue: unknown) => {
         const value = row.getValue(columnId);
         if (value === null || value === undefined) return false;
 
@@ -358,11 +360,10 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
   };
 
   // Copy to clipboard function
-  const copyToClipboard = async (text: string, format: string) => {
+  const copyToClipboard = async (text: string, _format?: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      // TODO: Add toast notification
-      console.log(`Copied ${selectedRowCount} rows as ${format}`);
+      // TODO: Add toast notification (use _format parameter)
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
     }
@@ -374,7 +375,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
     const selectedData = getSelectedRowsData();
     const csv = [
       result.columns.join(','),
-      ...selectedData.map((row: any) =>
+      ...selectedData.map((row: RowData) =>
         result.columns.map((col) => {
           const value = row[col];
           if (value === null) return '';

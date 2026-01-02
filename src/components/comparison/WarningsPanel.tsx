@@ -8,14 +8,9 @@ interface WarningsPanelProps {
 }
 
 export function WarningsPanel({ warnings }: WarningsPanelProps) {
-  console.log("WarningsPanel - Received warnings:", warnings);
-  console.log("WarningsPanel - Warnings count:", warnings.length);
-
   const highRiskWarnings = warnings.filter((w) => w.severity === WARNING_SEVERITY.HIGH);
   const mediumRiskWarnings = warnings.filter((w) => w.severity === WARNING_SEVERITY.MEDIUM);
   const lowRiskWarnings = warnings.filter((w) => w.severity === WARNING_SEVERITY.LOW);
-
-  console.log("High risk:", highRiskWarnings.length, "Medium:", mediumRiskWarnings.length, "Low:", lowRiskWarnings.length);
 
   if (warnings.length === 0) {
     return (

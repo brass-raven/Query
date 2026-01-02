@@ -1,6 +1,7 @@
 import { Editor } from '@monaco-editor/react';
 import { useRef, useEffect, memo } from 'react';
 import { initVimMode } from 'monaco-vim';
+import type * as Monaco from 'monaco-editor';
 import type { DatabaseSchema } from '../../types';
 
 interface SqlEditorProps {
@@ -16,11 +17,11 @@ interface SqlEditorProps {
 }
 
 export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady, vimMode = false }: SqlEditorProps) {
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const schemaRef = useRef(schema);
   const onRunQueryRef = useRef(onRunQuery);
-  const completionProviderRef = useRef<any>(null);
-  const vimModeRef = useRef<any>(null);
+  const completionProviderRef = useRef<Monaco.IDisposable | null>(null);
+  const vimModeRef = useRef<{ dispose: () => void } | null>(null);
 
   // Update refs when props change
   useEffect(() => {
@@ -68,7 +69,7 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
     onChange(newValue || '');
   }
 
-  function handleEditorMount(editor: any, monaco: any) {
+  function handleEditorMount(editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) {
     // Store editor instance
     editorRef.current = editor;
 
@@ -114,6 +115,8 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
     if (onEditorReady) {
       const insertAtCursor = (text: string) => {
         const position = editor.getPosition();
+        if (!position) return;
+
         const range = {
           startLineNumber: position.lineNumber,
           endLineNumber: position.lineNumber,
@@ -130,8 +133,8 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
 
       const insertSnippet = (snippet: string) => {
         // Use Monaco's native snippet controller for proper tab stop support
-        const snippetController = editor.getContribution('snippetController2');
-        if (snippetController) {
+        const snippetController = editor.getContribution('snippetController2') as any;
+        if (snippetController && typeof snippetController.insert === 'function') {
           snippetController.insert(snippet);
         } else {
           // Fallback: insert as plain text if snippet controller not available
@@ -181,7 +184,7 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
     }
 
     completionProviderRef.current = monaco.languages.registerCompletionItemProvider('sql', {
-      provideCompletionItems: (model: any, position: any) => {
+      provideCompletionItems: (model: Monaco.editor.ITextModel, position: Monaco.Position) => {
         const word = model.getWordUntilPosition(position);
         const range = {
           startLineNumber: position.lineNumber,
@@ -197,7 +200,7 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
           endColumn: position.column,
         }).toLowerCase();
 
-        const suggestions: any[] = [];
+        const suggestions: Monaco.languages.CompletionItem[] = [];
 
         // SQL Keywords
         const keywords = [

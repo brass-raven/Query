@@ -17,7 +17,9 @@ pub struct RecentProject {
 
 pub fn get_app_dir() -> Result<PathBuf, String> {
     // Check if custom project path is set
-    let project_path = PROJECT_PATH.lock().unwrap();
+    let project_path = PROJECT_PATH
+        .lock()
+        .map_err(|e| format!("Failed to acquire project path lock: {}", e))?;
 
     let app_dir = if let Some(path) = project_path.as_ref() {
         path.clone()
@@ -32,15 +34,65 @@ pub fn get_app_dir() -> Result<PathBuf, String> {
     Ok(app_dir)
 }
 
+/// Validates that a path is safe to use as a project directory
+/// Prevents path traversal attacks and ensures the path is absolute
+fn validate_project_path(path: &str) -> Result<PathBuf, String> {
+    let project_path = PathBuf::from(path);
+
+    // Reject paths containing parent directory references
+    if path.contains("..") {
+        return Err("Invalid path: parent directory references (..) are not allowed".to_string());
+    }
+
+    // Canonicalize to resolve any symlinks and get absolute path
+    // If the path doesn't exist yet, we need to handle it differently
+    let canonical_path = if project_path.exists() {
+        project_path.canonicalize()
+            .map_err(|e| format!("Could not resolve path: {}", e))?
+    } else {
+        // For non-existent paths, ensure they're absolute and clean
+        if !project_path.is_absolute() {
+            return Err("Project path must be an absolute path".to_string());
+        }
+
+        // Verify parent directory exists
+        if let Some(parent) = project_path.parent() {
+            if !parent.exists() {
+                return Err(format!("Parent directory does not exist: {}", parent.display()));
+            }
+            // Canonicalize parent and join with the last component
+            let canonical_parent = parent.canonicalize()
+                .map_err(|e| format!("Could not resolve parent path: {}", e))?;
+            if let Some(file_name) = project_path.file_name() {
+                canonical_parent.join(file_name)
+            } else {
+                canonical_parent
+            }
+        } else {
+            return Err("Invalid path: no parent directory".to_string());
+        }
+    };
+
+    // Additional safety check: ensure the resolved path doesn't contain ..
+    if canonical_path.to_string_lossy().contains("..") {
+        return Err("Invalid path: resolved path contains parent directory references".to_string());
+    }
+
+    Ok(canonical_path)
+}
+
 pub fn set_project_path_internal(path: String) -> Result<(), String> {
-    let project_path = PathBuf::from(&path);
+    // Validate the path before using it
+    let project_path = validate_project_path(&path)?;
 
     // Verify directory exists or can be created
     fs::create_dir_all(&project_path)
         .map_err(|e| format!("Could not create project directory: {}", e))?;
 
     // Set the global project path
-    let mut current_path = PROJECT_PATH.lock().unwrap();
+    let mut current_path = PROJECT_PATH
+        .lock()
+        .map_err(|e| format!("Failed to acquire project path lock: {}", e))?;
     *current_path = Some(project_path.clone());
 
     // Load existing settings and update project_path
@@ -54,11 +106,10 @@ pub fn set_project_path_internal(path: String) -> Result<(), String> {
     let mut settings = load_settings_json(&settings_file)?;
     settings["project_path"] = serde_json::json!(project_path.to_string_lossy().to_string());
 
-    fs::write(
-        settings_file,
-        serde_json::to_string_pretty(&settings).unwrap(),
-    )
-    .map_err(|e| format!("Could not write settings: {}", e))?;
+    let json_str = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    fs::write(settings_file, json_str)
+        .map_err(|e| format!("Could not write settings: {}", e))?;
 
     // Add to recent projects
     add_recent_project_internal(path)?;
@@ -67,7 +118,9 @@ pub fn set_project_path_internal(path: String) -> Result<(), String> {
 }
 
 pub fn get_current_project_path_internal() -> Result<Option<String>, String> {
-    let project_path = PROJECT_PATH.lock().unwrap();
+    let project_path = PROJECT_PATH
+        .lock()
+        .map_err(|e| format!("Failed to acquire project path lock: {}", e))?;
     Ok(project_path
         .as_ref()
         .map(|p| p.to_string_lossy().to_string()))
@@ -88,7 +141,9 @@ pub fn load_project_settings_internal() -> Result<(), String> {
             serde_json::from_str(&data).map_err(|e| format!("Failed to parse settings: {}", e))?;
 
         if let Some(path_str) = settings.get("project_path").and_then(|v| v.as_str()) {
-            let mut current_path = PROJECT_PATH.lock().unwrap();
+            let mut current_path = PROJECT_PATH
+                .lock()
+                .map_err(|e| format!("Failed to acquire project path lock: {}", e))?;
             *current_path = Some(PathBuf::from(path_str));
         }
     }
@@ -122,11 +177,10 @@ pub fn set_last_connection_internal(connection_name: String) -> Result<(), Strin
     let mut settings = load_settings_json(&settings_file)?;
     settings["last_connection"] = serde_json::json!(connection_name);
 
-    fs::write(
-        settings_file,
-        serde_json::to_string_pretty(&settings).unwrap(),
-    )
-    .map_err(|e| format!("Could not write settings: {}", e))?;
+    let json_str = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    fs::write(settings_file, json_str)
+        .map_err(|e| format!("Could not write settings: {}", e))?;
 
     Ok(())
 }
@@ -142,11 +196,10 @@ pub fn set_auto_connect_enabled_internal(enabled: bool) -> Result<(), String> {
     let mut settings = load_settings_json(&settings_file)?;
     settings["auto_connect_enabled"] = serde_json::json!(enabled);
 
-    fs::write(
-        settings_file,
-        serde_json::to_string_pretty(&settings).unwrap(),
-    )
-    .map_err(|e| format!("Could not write settings: {}", e))?;
+    let json_str = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    fs::write(settings_file, json_str)
+        .map_err(|e| format!("Could not write settings: {}", e))?;
 
     Ok(())
 }
@@ -162,11 +215,10 @@ pub fn set_vim_mode_enabled_internal(enabled: bool) -> Result<(), String> {
     let mut settings = load_settings_json(&settings_file)?;
     settings["vim_mode_enabled"] = serde_json::json!(enabled);
 
-    fs::write(
-        settings_file,
-        serde_json::to_string_pretty(&settings).unwrap(),
-    )
-    .map_err(|e| format!("Could not write settings: {}", e))?;
+    let json_str = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    fs::write(settings_file, json_str)
+        .map_err(|e| format!("Could not write settings: {}", e))?;
 
     Ok(())
 }
@@ -219,11 +271,10 @@ pub fn add_recent_project_internal(path: String) -> Result<(), String> {
     settings["recent_projects"] = serde_json::to_value(&recent_projects)
         .map_err(|e| format!("Failed to serialize recent projects: {}", e))?;
 
-    fs::write(
-        settings_file,
-        serde_json::to_string_pretty(&settings).unwrap(),
-    )
-    .map_err(|e| format!("Could not write settings: {}", e))?;
+    let json_str = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    fs::write(settings_file, json_str)
+        .map_err(|e| format!("Could not write settings: {}", e))?;
 
     Ok(())
 }
@@ -255,10 +306,9 @@ pub fn get_recent_projects_internal() -> Result<Vec<RecentProject>, String> {
         updated_settings["recent_projects"] = serde_json::to_value(&recent_projects)
             .map_err(|e| format!("Failed to serialize recent projects: {}", e))?;
 
-        let _ = fs::write(
-            settings_file,
-            serde_json::to_string_pretty(&updated_settings).unwrap(),
-        );
+        if let Ok(json_str) = serde_json::to_string_pretty(&updated_settings) {
+            let _ = fs::write(settings_file, json_str);
+        }
     }
 
     Ok(recent_projects)
@@ -280,11 +330,10 @@ pub fn remove_recent_project_internal(path: String) -> Result<(), String> {
     settings["recent_projects"] = serde_json::to_value(&recent_projects)
         .map_err(|e| format!("Failed to serialize recent projects: {}", e))?;
 
-    fs::write(
-        settings_file,
-        serde_json::to_string_pretty(&settings).unwrap(),
-    )
-    .map_err(|e| format!("Could not write settings: {}", e))?;
+    let json_str = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    fs::write(settings_file, json_str)
+        .map_err(|e| format!("Could not write settings: {}", e))?;
 
     Ok(())
 }

@@ -140,10 +140,10 @@ export default function AppNew() {
       }
 
       await loadSavedConnections();
-      loadQueryHistory();
-      loadSavedQueries();
-      loadCurrentProjectPath();
-      loadRecentProjects();
+      loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
+      loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
+      loadCurrentProjectPath().catch((err) => console.error("Failed to load current project path:", err));
+      loadRecentProjects().catch((err) => console.error("Failed to load recent projects:", err));
 
       // Load vim mode setting
       try {
@@ -158,20 +158,14 @@ export default function AppNew() {
         const autoConnectEnabled = await getAutoConnectEnabled();
         const lastConnectionName = await getLastConnection();
 
-        console.log("Auto-connect check:", { autoConnectEnabled, lastConnectionName });
-
         if (autoConnectEnabled && lastConnectionName) {
           // Try to auto-connect
           const savedConns = await loadConnections();
           const lastConn = savedConns.find((c) => c.name === lastConnectionName);
 
-          console.log("Found connection:", lastConn);
-
           if (lastConn) {
             // Load password from keychain (or use empty string if no password)
             const password = await getConnectionPassword(lastConnectionName);
-
-            console.log("Password retrieved:", password ? "yes" : "no (using empty string)");
 
             // Use password from keychain, or empty string if none stored
             const connWithPassword = { ...lastConn, password: password || "" };
@@ -576,9 +570,9 @@ export default function AppNew() {
 
       // Reload all project-specific data
       await loadSavedConnections();
-      loadQueryHistory();
-      loadSavedQueries();
-      loadRecentProjects();
+      loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
+      loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
+      loadRecentProjects().catch((err) => console.error("Failed to load recent projects:", err));
 
       // Clear current connection and schema
       setConnected(false);
@@ -653,7 +647,7 @@ export default function AppNew() {
 
     // Convert rows to objects with column names as keys
     const data = result.rows.map((row) => {
-      const obj: any = {};
+      const obj: Record<string, unknown> = {};
       result.columns.forEach((col, idx) => {
         obj[col] = row[idx];
       });
@@ -763,17 +757,22 @@ export default function AppNew() {
                 onValueChange={(value) => {
                   if (value === "__browse__") {
                     // Open file picker for browsing
-                    import("@tauri-apps/plugin-dialog").then(({ open }) => {
-                      open({
-                        directory: true,
-                        multiple: false,
-                        title: "Select Project Directory",
-                      }).then((selected) => {
-                        if (selected) {
-                          handleProjectChange(selected);
-                        }
+                    import("@tauri-apps/plugin-dialog")
+                      .then(({ open }) => {
+                        return open({
+                          directory: true,
+                          multiple: false,
+                          title: "Select Project Directory",
+                        }).then((selected) => {
+                          if (selected) {
+                            handleProjectChange(selected);
+                          }
+                        });
+                      })
+                      .catch((err) => {
+                        console.error("Failed to open file dialog:", err);
+                        setStatus("Failed to open file dialog");
                       });
-                    });
                   } else if (value !== "default") {
                     handleProjectChange(value);
                   }

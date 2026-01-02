@@ -12,9 +12,17 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import dagre from 'dagre';
-import type { DatabaseSchema } from '../../types';
+import type { DatabaseSchema, ColumnInfo } from '../../types';
 import { TableNode } from './TableNode';
 import '@xyflow/react/dist/style.css';
+
+// Type for table node data
+interface TableNodeData {
+  label: string;
+  columns: ColumnInfo[];
+  expanded: boolean;
+  onToggleExpand: (tableName: string) => void;
+}
 
 interface ErdDiagramProps {
   schema: DatabaseSchema | null;
@@ -34,7 +42,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   nodes.forEach((node) => {
     // Calculate dynamic height based on number of columns and expansion state
-    const data = node.data as any;
+    const data = node.data as unknown as TableNodeData;
     const totalColumns = data.columns?.length || 0;
     const isExpanded = data.expanded || false;
 
@@ -62,7 +70,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   nodes.forEach((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
-    const data = node.data as any;
+    const data = node.data as unknown as TableNodeData;
     const totalColumns = data.columns?.length || 0;
     const isExpanded = data.expanded || false;
 

@@ -111,11 +111,17 @@ pub fn get_git_status() -> Result<GitStatus, String> {
             "??" => untracked += 1,
             _ => {
                 // First char is staged status, second char is unstaged status
-                if status_code.chars().nth(0).unwrap() != ' ' {
-                    staged += 1;
+                // Ensure we have at least 2 characters before accessing them
+                let mut chars = status_code.chars();
+                if let Some(first_char) = chars.next() {
+                    if first_char != ' ' {
+                        staged += 1;
+                    }
                 }
-                if status_code.chars().nth(1).unwrap() != ' ' {
-                    unstaged += 1;
+                if let Some(second_char) = chars.next() {
+                    if second_char != ' ' {
+                        unstaged += 1;
+                    }
                 }
             }
         }

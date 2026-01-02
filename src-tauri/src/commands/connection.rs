@@ -2,17 +2,22 @@ use crate::models::{
     ColumnInfo, ConnectionConfig, DatabaseSchema, ForeignKeyInfo, QueryResult, TableInfo,
     EnhancedColumnInfo, EnhancedDatabaseSchema, EnhancedTableInfo, IndexInfo, RoutineInfo, ViewInfo,
 };
-use sqlx::postgres::PgPool;
-use sqlx::{Column, Row};
+use sqlx::postgres::{PgConnectOptions, PgPool};
+use sqlx::{Column, ConnectOptions, Row};
 
 #[tauri::command]
 pub async fn test_postgres_connection(config: ConnectionConfig) -> Result<String, String> {
-    let connection_string = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        config.username, config.password, config.host, config.port, config.database
-    );
+    let mut options = PgConnectOptions::new()
+        .host(&config.host)
+        .port(config.port)
+        .username(&config.username)
+        .password(&config.password)
+        .database(&config.database);
 
-    let pool = PgPool::connect(&connection_string)
+    // Disable statement logging to prevent password leakage
+    options = options.disable_statement_logging();
+
+    let pool = PgPool::connect_with(options)
         .await
         .map_err(|e| format!("Error connecting to database: {}", e))?;
 
@@ -45,12 +50,17 @@ pub async fn execute_query(
 
     let start = std::time::Instant::now();
 
-    let connection_string = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        config.username, config.password, config.host, config.port, config.database
-    );
+    let mut options = PgConnectOptions::new()
+        .host(&config.host)
+        .port(config.port)
+        .username(&config.username)
+        .password(&config.password)
+        .database(&config.database);
 
-    let pool = PgPool::connect(&connection_string)
+    // Disable statement logging to prevent password leakage
+    options = options.disable_statement_logging();
+
+    let pool = PgPool::connect_with(options)
         .await
         .map_err(|e| format!("Error connecting to database: {}", e))?;
 
@@ -108,12 +118,17 @@ pub async fn get_database_schema(
     config: ConnectionConfig,
     schema: Option<String>,
 ) -> Result<DatabaseSchema, String> {
-    let connection_string = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        config.username, config.password, config.host, config.port, config.database
-    );
+    let mut options = PgConnectOptions::new()
+        .host(&config.host)
+        .port(config.port)
+        .username(&config.username)
+        .password(&config.password)
+        .database(&config.database);
 
-    let pool = PgPool::connect(&connection_string)
+    // Disable statement logging to prevent password leakage
+    options = options.disable_statement_logging();
+
+    let pool = PgPool::connect_with(options)
         .await
         .map_err(|e| format!("Connection failed: {}", e))?;
 
@@ -258,12 +273,17 @@ pub async fn get_database_schema(
 
 #[tauri::command]
 pub async fn get_database_schemas(config: ConnectionConfig) -> Result<Vec<String>, String> {
-    let connection_string = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        config.username, config.password, config.host, config.port, config.database
-    );
+    let mut options = PgConnectOptions::new()
+        .host(&config.host)
+        .port(config.port)
+        .username(&config.username)
+        .password(&config.password)
+        .database(&config.database);
 
-    let pool = PgPool::connect(&connection_string)
+    // Disable statement logging to prevent password leakage
+    options = options.disable_statement_logging();
+
+    let pool = PgPool::connect_with(options)
         .await
         .map_err(|e| format!("Connection failed: {}", e))?;
 
@@ -297,12 +317,17 @@ pub async fn get_enhanced_database_schema(
     config: ConnectionConfig,
     schema: Option<String>,
 ) -> Result<EnhancedDatabaseSchema, String> {
-    let connection_string = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        config.username, config.password, config.host, config.port, config.database
-    );
+    let mut options = PgConnectOptions::new()
+        .host(&config.host)
+        .port(config.port)
+        .username(&config.username)
+        .password(&config.password)
+        .database(&config.database);
 
-    let pool = PgPool::connect(&connection_string)
+    // Disable statement logging to prevent password leakage
+    options = options.disable_statement_logging();
+
+    let pool = PgPool::connect_with(options)
         .await
         .map_err(|e| format!("Connection failed: {}", e))?;
 

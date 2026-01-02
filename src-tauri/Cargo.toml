@@ -25,10 +25,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.8.6", features = ["postgres", "sqlite", "mysql", "runtime-tokio-native-tls"] }
 tokio = { version = "1.48.0", features = ["full"] }
-ring = "0.17.14"
 dirs = "6.0.0"
 chrono = { version = "0.4.42", features = ["serde"] }
 keyring = { version = "3.6.3", features = ["apple-native", "sync-secret-service"] }
-serde_yaml = "0.9.34"
 tauri-plugin-dialog = "2"
 

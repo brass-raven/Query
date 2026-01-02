@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, memo } from 'react';
 import { Input } from '../ui/input';
 
 interface EditableCellProps {
-  value: any;
+  value: unknown;
   rowIndex: number;
   columnId: string;
-  onUpdate: (rowIndex: number, columnId: string, value: any) => void;
+  onUpdate: (rowIndex: number, columnId: string, value: unknown) => void;
   isDirty?: boolean;
 }
 

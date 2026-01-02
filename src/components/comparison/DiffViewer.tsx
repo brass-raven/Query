@@ -37,10 +37,6 @@ export function DiffViewer({ comparison, filterMode }: DiffViewerProps) {
     return hasHighRiskWarning;
   });
 
-  console.log("DiffViewer - Total tables:", comparison.table_differences.length);
-  console.log("DiffViewer - Filtered tables:", filteredTables.length);
-  console.log("DiffViewer - Filter mode:", filterMode);
-
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-lg font-semibold mb-4 flex-shrink-0">Table DDL Comparison</h2>

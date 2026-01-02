@@ -65,9 +65,6 @@ export function SchemaComparisonPage({
     setLoading(true);
     try {
       const result = await compareSchemas(sourceConfigWithPassword, targetConfigWithPassword);
-      console.log("Comparison result:", result);
-      console.log("Warnings:", result.warnings);
-      console.log("Table differences:", result.table_differences);
       setComparison(result);
 
       // Generate migration script
