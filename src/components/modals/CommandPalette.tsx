@@ -1,4 +1,4 @@
-import { memo, useState, useMemo, useEffect } from "react";
+import { memo } from "react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -8,7 +8,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "../ui/command";
-import { Database, History as HistoryIcon, Search, BookmarkIcon, Pin, Code } from "lucide-react";
+import { Database, History as HistoryIcon, Search, BookmarkIcon, Pin } from "lucide-react";
 import type { DatabaseSchema, QueryHistoryEntry, SavedQuery } from "../../types";
 import { DEFAULTS, UI_LAYOUT } from "../../constants";
 
@@ -26,69 +26,9 @@ interface Command {
   label: string;
   description: string;
   query: string;
-  category: "table" | "history" | "saved" | "contextual";
+  category: "table" | "history" | "saved";
   icon?: React.ReactNode;
   isPinned?: boolean;
-}
-
-// SQL context detection utilities
-function detectSQLContext(input: string): {
-  type: "select" | "update" | "delete" | "insert" | "join" | "where" | "unknown";
-  tableName?: string;
-  partial: string;
-} {
-  const normalized = input.toLowerCase().trim();
-
-  // Detect SELECT context
-  if (normalized.match(/^select\s+/)) {
-    const fromMatch = normalized.match(/from\s+(\w+)/);
-    const whereMatch = normalized.match(/where\s+(.*)$/);
-
-    // Try to extract table name from "select tablename where" pattern
-    const selectTableMatch = normalized.match(/^select\s+(?:\*\s+from\s+)?(\w+)\s+where/);
-
-    if (whereMatch) {
-      const tableName = fromMatch?.[1] || selectTableMatch?.[1];
-      return { type: "where", tableName, partial: whereMatch[1] };
-    }
-    if (fromMatch) {
-      return { type: "select", tableName: fromMatch[1], partial: normalized };
-    }
-    return { type: "select", partial: normalized };
-  }
-
-  // Detect UPDATE context
-  if (normalized.match(/^update\s+(\w+)/)) {
-    const tableMatch = normalized.match(/^update\s+(\w+)/);
-    const whereMatch = normalized.match(/where\s+(.*)$/);
-    if (whereMatch) {
-      return { type: "where", tableName: tableMatch?.[1], partial: whereMatch[1] };
-    }
-    return { type: "update", tableName: tableMatch?.[1], partial: normalized };
-  }
-
-  // Detect DELETE context
-  if (normalized.match(/^delete\s+from\s+(\w+)/)) {
-    const tableMatch = normalized.match(/^delete\s+from\s+(\w+)/);
-    const whereMatch = normalized.match(/where\s+(.*)$/);
-    if (whereMatch) {
-      return { type: "where", tableName: tableMatch?.[1], partial: whereMatch[1] };
-    }
-    return { type: "delete", tableName: tableMatch?.[1], partial: normalized };
-  }
-
-  // Detect INSERT context
-  if (normalized.match(/^insert\s+into\s+(\w+)/)) {
-    const tableMatch = normalized.match(/^insert\s+into\s+(\w+)/);
-    return { type: "insert", tableName: tableMatch?.[1], partial: normalized };
-  }
-
-  // Detect JOIN context
-  if (normalized.match(/join\s*$/)) {
-    return { type: "join", partial: normalized };
-  }
-
-  return { type: "unknown", partial: normalized };
 }
 
 export const CommandPalette = memo(function CommandPalette({
@@ -99,36 +39,8 @@ export const CommandPalette = memo(function CommandPalette({
   savedQueries,
   onExecuteQuery,
 }: CommandPaletteProps) {
-  const [searchInput, setSearchInput] = useState("");
-
-  // Reset search input when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setSearchInput("");
-    }
-  }, [isOpen]);
-
-  // Detect SQL context from search input
-  const sqlContext = useMemo(() => detectSQLContext(searchInput), [searchInput]);
-
   // Build commands list
-  const commands: Command[] = useMemo(() => {
-    const cmds: Command[] = [];
-
-    // Simple autocomplete: if user types "select", show table suggestions
-    const lowerInput = searchInput.toLowerCase().trim();
-    if (lowerInput.startsWith("select") && schema?.tables) {
-      schema.tables.forEach((table) => {
-        cmds.push({
-          id: `select-${table.table_name}`,
-          label: `SELECT * FROM ${table.table_name}`,
-          description: `Query ${table.table_name} table`,
-          query: `SELECT * FROM ${table.table_name} LIMIT 100;`,
-          category: "contextual",
-          icon: <Code className="h-4 w-4" />,
-        });
-      });
-    }
+  const commands: Command[] = [];
 
   // Add table commands (default templates)
   if (schema?.tables) {
@@ -136,7 +48,7 @@ export const CommandPalette = memo(function CommandPalette({
       const tableName = table.table_name;
 
       // SELECT command
-      cmds.push({
+      commands.push({
         id: `select-${tableName}`,
         label: `SELECT ${tableName}`,
         description: `Select all from ${tableName} (limit ${DEFAULTS.QUERY_LIMIT})`,
@@ -146,7 +58,7 @@ export const CommandPalette = memo(function CommandPalette({
       });
 
       // UPDATE command
-      cmds.push({
+      commands.push({
         id: `update-${tableName}`,
         label: `UPDATE ${tableName}`,
         description: `Update records in ${tableName}`,
@@ -156,7 +68,7 @@ export const CommandPalette = memo(function CommandPalette({
       });
 
       // DESCRIBE command
-      cmds.push({
+      commands.push({
         id: `describe-${tableName}`,
         label: `DESCRIBE ${tableName}`,
         description: `Show structure of ${tableName}`,
@@ -173,7 +85,7 @@ ORDER BY ordinal_position;`,
       });
 
       // COUNT command
-      cmds.push({
+      commands.push({
         id: `count-${tableName}`,
         label: `COUNT ${tableName}`,
         description: `Count rows in ${tableName}`,
@@ -183,7 +95,7 @@ ORDER BY ordinal_position;`,
       });
 
       // INSERT command
-      cmds.push({
+      commands.push({
         id: `insert-${tableName}`,
         label: `INSERT ${tableName}`,
         description: `Insert new record into ${tableName}`,
@@ -193,7 +105,7 @@ ORDER BY ordinal_position;`,
       });
 
       // DELETE command
-      cmds.push({
+      commands.push({
         id: `delete-${tableName}`,
         label: `DELETE ${tableName}`,
         description: `Delete records from ${tableName}`,
@@ -206,7 +118,7 @@ ORDER BY ordinal_position;`,
 
   // Add recent queries from history
   history.slice(0, DEFAULTS.RECENT_HISTORY_LIMIT).forEach((entry) => {
-    cmds.push({
+    commands.push({
       id: `history-${entry.id}`,
       label:
         entry.query.substring(0, UI_LAYOUT.QUERY_PREVIEW_LENGTH) + (entry.query.length > UI_LAYOUT.QUERY_PREVIEW_LENGTH ? "..." : ""),
@@ -219,7 +131,7 @@ ORDER BY ordinal_position;`,
 
   // Add saved queries
   savedQueries.forEach((saved) => {
-    cmds.push({
+    commands.push({
       id: `saved-${saved.id}`,
       label: saved.name,
       description: saved.description || saved.query.substring(0, 60) + (saved.query.length > 60 ? "..." : ""),
@@ -230,34 +142,10 @@ ORDER BY ordinal_position;`,
     });
   });
 
-    return cmds;
-  }, [schema, history, savedQueries, searchInput, sqlContext]);
-
-  // Filter commands based on search input
-  const filteredCommands = useMemo(() => {
-    if (!searchInput) return commands;
-
-    const lowerSearch = searchInput.toLowerCase();
-
-    // If user types "select", only show contextual SELECT suggestions
-    if (lowerSearch.startsWith("select")) {
-      return commands.filter((c) => c.category === "contextual");
-    }
-
-    // Otherwise, normal fuzzy filtering
-    return commands.filter((c) => {
-      return (
-        c.label.toLowerCase().includes(lowerSearch) ||
-        c.description.toLowerCase().includes(lowerSearch)
-      );
-    });
-  }, [commands, searchInput]);
-
   // Group by category
-  const tableCommands = filteredCommands.filter((c) => c.category === "table");
-  const historyCommands = filteredCommands.filter((c) => c.category === "history");
-  const savedCommands = filteredCommands.filter((c) => c.category === "saved");
-  const contextualCommands = filteredCommands.filter((c) => c.category === "contextual");
+  const tableCommands = commands.filter((c) => c.category === "table");
+  const historyCommands = commands.filter((c) => c.category === "history");
+  const savedCommands = commands.filter((c) => c.category === "saved");
 
   const handleSelect = (command: Command) => {
     onExecuteQuery(command.query);
@@ -270,13 +158,8 @@ ORDER BY ordinal_position;`,
       onOpenChange={onClose}
       title="Command Palette"
       description="Search for tables, commands, or recent queries"
-      shouldFilter={false}
     >
-      <CommandInput
-        placeholder="Search tables or type 'select' to start a query..."
-        value={searchInput}
-        onValueChange={setSearchInput}
-      />
+      <CommandInput placeholder="Search for tables, commands, or recent queries..." />
       <CommandList>
         <CommandEmpty>
           {schema?.tables.length === 0 ? (
@@ -290,30 +173,6 @@ ORDER BY ordinal_position;`,
             <p className="text-sm">No results found</p>
           )}
         </CommandEmpty>
-
-        {contextualCommands.length > 0 && (
-          <CommandGroup heading="Tables">
-            {contextualCommands.map((cmd) => (
-              <CommandItem
-                key={cmd.id}
-                value={`${cmd.label} ${cmd.description}`}
-                onSelect={() => handleSelect(cmd)}
-              >
-                {cmd.icon}
-                <div className="flex flex-col">
-                  <span className="font-medium">{cmd.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {cmd.description}
-                  </span>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-
-        {contextualCommands.length > 0 && tableCommands.length > 0 && (
-          <CommandSeparator />
-        )}
 
         {tableCommands.length > 0 && (
           <CommandGroup heading="Table Commands">

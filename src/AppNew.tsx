@@ -66,12 +66,14 @@ import {
   Database,
   Folder,
   GitCompareArrows,
+  Wand2,
 } from "lucide-react";
 import { SqlEditor } from "./components/editor/SqlEditor";
 import { ResultsTableEnhanced } from "./components/results/ResultsTableEnhanced";
 import { ErdDiagram } from "./components/erd/ErdDiagram";
 import { SaveQueryModal } from "./components/modals/SaveQueryModal";
 import { CommandPalette } from "./components/modals/CommandPalette";
+import { QueryBuilder } from "./components/modals/QueryBuilder";
 import { ProjectSettings } from "./components/modals/ProjectSettings";
 import { ConnectionModal } from "./components/modals/ConnectionModal";
 import { Settings } from "./components/modals/Settings";
@@ -95,6 +97,7 @@ export default function AppNew() {
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showQueryBuilder, setShowQueryBuilder] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showSchemaComparison, setShowSchemaComparison] = useState(false);
@@ -217,6 +220,11 @@ export default function AppNew() {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setShowCommandPalette((prev) => !prev);
+      }
+      // Cmd+B: Query Builder
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        setShowQueryBuilder((prev) => !prev);
       }
       // Cmd+,: Settings
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
@@ -855,6 +863,16 @@ export default function AppNew() {
                 <span className="text-xs font-mono">K</span>
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowQueryBuilder(true)}
+                className="h-7 gap-1.5"
+                title="Query Builder"
+              >
+                <Wand2 className="h-3 w-3" />
+                <span className="text-xs">Build</span>
+              </Button>
+              <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowSchemaComparison(true)}
@@ -1028,6 +1046,16 @@ export default function AppNew() {
         history={history}
         savedQueries={savedQueries}
         onExecuteQuery={handleExecuteFromPalette}
+      />
+
+      <QueryBuilder
+        isOpen={showQueryBuilder}
+        onClose={() => setShowQueryBuilder(false)}
+        schema={schema}
+        onExecuteQuery={(query) => {
+          setQuery(query);
+          runQuery();
+        }}
       />
 
       <Settings

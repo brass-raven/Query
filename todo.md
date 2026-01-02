@@ -102,13 +102,14 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 - [x] app pages should have space above them (sidebar and compare page)
 - [x] paste functionality (added Edit menu with clipboard shortcuts)
 - [x] ERD should have column (custom TableNode with expandable columns - shows 10 by default, click to expand all)
-
-### Priority Features
 - [x] sidebar should be resizable
 - [x] store vim mode in .query settings
 - [x] cmd+k should show saved queries
 - [x] cmd+k should have better query abilities, for example, when i say select user i should be able to say "where ..." and there should be autocomplete for the columns
+- [x] db url parse not allowing to paste in.
 
+### Priority Features
+- [ ] remove all the damn use states. need to refactor the AppNew file.
 
 ### Future Features
 - [ ] robust table manipulation (create, alter, drop tables from UI)
@@ -116,12 +117,12 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 - [ ] other database types:
   - mysql
   - mongodb (nosql)
-
 ### Low Priority
 - [ ] cancel query (abort long-running queries)
 - [ ] break out large files to separate files
 - [ ] general refactoring and cleanup
 - [ ] github action workflow for building and publishing
-- [ ] db url parse not allowing to paste in.
+- [ ] better git integration: view the diffs.
+- [ ] address all build errors & warnings.
 
 ---
