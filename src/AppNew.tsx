@@ -1,35 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { DEFAULTS, UI_LAYOUT, READ_ONLY_COMMANDS, ERROR_MESSAGES, MACOS_TITLEBAR_LEFT_PADDING } from "./constants";
+import { UI_LAYOUT, MACOS_TITLEBAR_LEFT_PADDING } from "./constants";
+import { getAppDir, getConnectionPassword } from "./utils/tauri";
 import {
-  saveConnectionPassword,
-  getConnectionPassword,
-  deleteConnectionPassword,
-  testPostgresConnection,
-  getDatabaseSchema,
-  getDatabaseSchemas,
-  executeQuery,
-  loadConnections,
-  saveConnections,
-  getQueryHistory,
-  saveQueryToHistory,
-  clearQueryHistory,
-  getSavedQueries,
-  saveQuery,
-  deleteSavedQuery,
-  togglePinQuery,
-  getCurrentProjectPath,
-  setProjectPath,
-  getAppDir,
-  getAutoConnectEnabled,
-  getLastConnection,
-  setLastConnection,
-  getRecentProjects,
-  loadProjectSettings,
-  getVimModeEnabled,
-  setVimModeEnabled,
-} from "./utils/tauri";
+  useConnection,
+  useQueryExecution,
+  useModals,
+  useLayoutPreferences,
+  useStorageData,
+  useProjectManagement,
+} from "./hooks";
 import {
   SidebarProvider,
   SidebarInset,
@@ -78,131 +59,24 @@ import { ProjectSettings } from "./components/modals/ProjectSettings";
 import { ConnectionModal } from "./components/modals/ConnectionModal";
 import { Settings } from "./components/modals/Settings";
 import { SchemaComparisonPage } from "./components/comparison/SchemaComparisonPage";
-import type {
-  DatabaseSchema,
-  ConnectionConfig,
-  QueryResult,
-  QueryHistoryEntry,
-  SavedQuery,
-  RecentProject,
-} from "./types";
-import { DEFAULT_CONNECTION } from "./constants";
 
 export default function AppNew() {
-  const [schema, setSchema] = useState<DatabaseSchema | null>(null);
-  const [availableSchemas, setAvailableSchemas] = useState<string[]>([]);
-  const [selectedSchema, setSelectedSchema] = useState<string>("public");
-  const [connections, setConnections] = useState<ConnectionConfig[]>([]);
-  const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
-  const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [showQueryBuilder, setShowQueryBuilder] = useState(false);
-  const [showConnectionModal, setShowConnectionModal] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showSchemaComparison, setShowSchemaComparison] = useState(false);
-  const [vimMode, setVimMode] = useState(false);
-  const [compactView, setCompactView] = useState(false);
-  const [fullScreenResults, setFullScreenResults] = useState(false);
-  const [readOnlyMode, setReadOnlyMode] = useState(false);
-  const [showErd, setShowErd] = useState(false);
-  const [layoutDirection, setLayoutDirection] = useState<
-    "vertical" | "horizontal"
-  >("vertical");
-  const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(
-    null,
-  );
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
-  const [showProjectPicker, setShowProjectPicker] = useState(false);
-  const [editingConnection, setEditingConnection] = useState<ConnectionConfig | null>(null);
+  // Custom hooks
+  const connection = useConnection();
+  const queryExecution = useQueryExecution();
+  const modals = useModals();
+  const layout = useLayoutPreferences();
+  const storage = useStorageData();
+  const project = useProjectManagement();
 
-  const [config, setConfig] = useState<ConnectionConfig>(DEFAULT_CONNECTION);
-
-  const [connected, setConnected] = useState(false);
-  const connectedRef = useRef(false);
-  const [query, setQuery] = useState(`SELECT * FROM users LIMIT ${DEFAULTS.QUERY_LIMIT};`);
-  const [result, setResult] = useState<QueryResult | null>(null);
-  const [status, setStatus] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [insertAtCursor, setInsertAtCursor] = useState<
-    ((text: string) => void) | null
-  >(null);
-  const [insertSnippet, setInsertSnippet] = useState<
-    ((snippet: string) => void) | null
-  >(null);
-
+  // Initialize on mount
   useEffect(() => {
     async function initialize() {
-      try {
-        await loadProjectSettings();
-      } catch (error) {
-        console.error("Failed to load project settings:", error);
-      }
-
-      await loadSavedConnections();
-      loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
-      loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
-      loadCurrentProjectPath().catch((err) => console.error("Failed to load current project path:", err));
-      loadRecentProjects().catch((err) => console.error("Failed to load recent projects:", err));
-
-      // Load vim mode setting
-      try {
-        const vimEnabled = await getVimModeEnabled();
-        setVimMode(vimEnabled);
-      } catch (error) {
-        console.error("Failed to load vim mode setting:", error);
-      }
-
-      // Check if auto-connect is enabled
-      try {
-        const autoConnectEnabled = await getAutoConnectEnabled();
-        const lastConnectionName = await getLastConnection();
-
-        if (autoConnectEnabled && lastConnectionName) {
-          // Try to auto-connect
-          const savedConns = await loadConnections();
-          const lastConn = savedConns.find((c) => c.name === lastConnectionName);
-
-          if (lastConn) {
-            // Load password from keychain (or use empty string if no password)
-            const password = await getConnectionPassword(lastConnectionName);
-
-            // Use password from keychain, or empty string if none stored
-            const connWithPassword = { ...lastConn, password: password || "" };
-            setConfig(connWithPassword);
-            setReadOnlyMode(lastConn.readOnly || false);
-
-            // Auto-connect
-            setLoading(true);
-            try {
-              const result = await testPostgresConnection(connWithPassword);
-              setStatus(`Auto-connected: ${result}`);
-              setConnected(true);
-              connectedRef.current = true;
-
-              // Load available schemas
-              const schemas = await getDatabaseSchemas(connWithPassword);
-              setAvailableSchemas(schemas);
-
-              // Load schema (default to 'public')
-              const dbSchema = await getDatabaseSchema(connWithPassword, "public");
-              setSchema(dbSchema);
-              setSelectedSchema("public");
-            } catch (error) {
-              setStatus(`Auto-connect failed: ${error}`);
-              setConnected(false);
-              connectedRef.current = false;
-              setSchema(null);
-            } finally {
-              setLoading(false);
-            }
-          } else {
-            console.warn("Connection not found:", lastConnectionName);
-          }
-        }
-      } catch (error) {
-        console.error("Auto-connect failed:", error);
-      }
+      await project.initializeProjectSettings();
+      await storage.loadSavedConnections();
+      storage.loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
+      storage.loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
+      await connection.autoConnect();
     }
     initialize();
   }, []);
@@ -213,34 +87,34 @@ export default function AppNew() {
       // Cmd+K: Command palette
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setShowCommandPalette((prev) => !prev);
+        modals.toggleModal("commandPalette");
       }
       // Cmd+B: Query Builder
       if ((e.metaKey || e.ctrlKey) && e.key === "b") {
         e.preventDefault();
-        setShowQueryBuilder((prev) => !prev);
+        modals.toggleModal("queryBuilder");
       }
       // Cmd+,: Settings
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         e.preventDefault();
-        setShowSettings((prev) => !prev);
+        modals.toggleModal("settings");
       }
       // Cmd+Shift+F: Toggle full-screen results
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "F") {
         e.preventDefault();
-        setFullScreenResults((prev) => !prev);
+        layout.toggleFullScreenResults();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [modals, layout]);
 
   // Listen for menu events to reveal project directory
   useEffect(() => {
     const unlisten = listen("reveal-project-directory", async () => {
       try {
-        const path = currentProjectPath || `${await getAppDir()}/.query`;
+        const path = project.currentProjectPath || `${await getAppDir()}/.query`;
         await revealItemInDir(path);
       } catch (error) {
         console.error("Failed to reveal project directory:", error);
@@ -250,427 +124,167 @@ export default function AppNew() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [currentProjectPath]);
+  }, [project.currentProjectPath]);
 
-  const loadCurrentProjectPath = useCallback(async () => {
-    try {
-      const path = await getCurrentProjectPath();
-      setCurrentProjectPath(path);
-    } catch (error) {
-      console.error("Failed to load project path:", error);
-    }
-  }, []);
-
-  const loadRecentProjects = useCallback(async () => {
-    try {
-      const projects = await getRecentProjects();
-      setRecentProjects(projects);
-    } catch (error) {
-      console.error("Failed to load recent projects:", error);
-    }
-  }, []);
-
-  const loadSavedConnections = useCallback(async () => {
-    try {
-      const saved = await loadConnections();
-      setConnections(saved);
-    } catch (error) {
-      console.error("Failed to load connections:", error);
-    }
-  }, []);
-
-  const loadQueryHistory = useCallback(async () => {
-    try {
-      const hist = await getQueryHistory(DEFAULTS.HISTORY_LIMIT);
-      setHistory(hist);
-    } catch (error) {
-      console.error("Failed to load history:", error);
-    }
-  }, []);
-
-  const loadSavedQueries = useCallback(async () => {
-    try {
-      const queries = await getSavedQueries();
-      setSavedQueries(queries);
-    } catch (error) {
-      console.error("Failed to load saved queries:", error);
-    }
-  }, []);
-
+  // Handlers
   const handleSaveQuery = useCallback(
     async (name: string, description: string) => {
       try {
-        await saveQuery(name, query, description || null);
-        await loadSavedQueries();
-        setStatus(`Query "${name}" saved successfully`);
-        setShowSaveModal(false);
+        await storage.saveNewQuery(name, queryExecution.query, description || null);
+        connection.setStatus(`Query "${name}" saved successfully`);
+        modals.closeModal("saveModal");
       } catch (error) {
-        setStatus(`Failed to save query: ${error}`);
+        connection.setStatus(`Failed to save query: ${error}`);
       }
     },
-    [query, loadSavedQueries],
+    [queryExecution.query, storage, connection, modals]
   );
 
   const handleDeleteSavedQuery = useCallback(
     async (id: number) => {
       try {
-        await deleteSavedQuery(id);
-        await loadSavedQueries();
-        setStatus("Query deleted");
+        await storage.deleteQuery(id);
+        connection.setStatus("Query deleted");
       } catch (error) {
-        setStatus(`Failed to delete query: ${error}`);
+        connection.setStatus(`Failed to delete query: ${error}`);
       }
     },
-    [loadSavedQueries],
+    [storage, connection]
   );
 
   const handleTogglePin = useCallback(
     async (id: number) => {
       try {
-        await togglePinQuery(id);
-        await loadSavedQueries();
+        await storage.togglePin(id);
       } catch (error) {
-        setStatus(`Failed to toggle pin: ${error}`);
+        connection.setStatus(`Failed to toggle pin: ${error}`);
       }
     },
-    [loadSavedQueries],
+    [storage, connection]
   );
 
   const handleSaveConnection = useCallback(
-    async (connection: ConnectionConfig) => {
+    async (conn: import("./types").ConnectionConfig) => {
       try {
-        // Save password to keychain if provided
-        if (connection.password) {
-          await saveConnectionPassword(connection.name, connection.password);
-        }
-
-        // Add or update connection in list
-        const existing = connections.find((c) => c.name === connection.name);
-        let updated: ConnectionConfig[];
-
-        if (existing) {
-          updated = connections.map((c) =>
-            c.name === connection.name ? { ...connection, password: "" } : c,
-          );
-        } else {
-          updated = [...connections, { ...connection, password: "" }];
-        }
-
-        await saveConnections(updated);
-        setConnections(updated);
-        setConfig(connection);
-        setStatus(`Connection "${connection.name}" saved successfully`);
-        setShowConnectionModal(false);
-        setEditingConnection(null);
+        await storage.saveConnection(conn, storage.connections);
+        connection.setConfig(conn);
+        connection.setStatus(`Connection "${conn.name}" saved successfully`);
+        modals.closeModal("connectionModal");
       } catch (error) {
-        setStatus(`Failed to save connection: ${error}`);
+        connection.setStatus(`Failed to save connection: ${error}`);
       }
     },
-    [connections],
+    [storage, connection, modals]
   );
 
   const handleDeleteConnection = useCallback(
     async (name: string) => {
       try {
-        const updated = connections.filter((c) => c.name !== name);
-
-        // Delete from keychain
-        await deleteConnectionPassword(name);
-
-        // Delete from JSON
-        await saveConnections(updated);
-        setConnections(updated);
-        setStatus(`Connection "${name}" deleted`);
+        await storage.deleteConnection(name);
+        connection.setStatus(`Connection "${name}" deleted`);
       } catch (error) {
-        setStatus(`Failed to delete connection: ${error}`);
+        connection.setStatus(`Failed to delete connection: ${error}`);
       }
     },
-    [connections],
+    [storage, connection]
   );
 
-  const handleEditConnection = useCallback(async (connection: ConnectionConfig) => {
-    // Fetch password from keychain
-    try {
-      const password = await getConnectionPassword(connection.name);
-      const connWithPassword = { ...connection, password: password || "" };
-      setEditingConnection(connWithPassword);
-      setShowConnectionModal(true);
-    } catch (err) {
-      console.error('Error retrieving password from keychain:', err);
-      // Still open modal but without password
-      setEditingConnection(connection);
-      setShowConnectionModal(true);
-    }
-  }, []);
+  const handleEditConnection = useCallback(
+    async (conn: import("./types").ConnectionConfig) => {
+      try {
+        const password = await getConnectionPassword(conn.name);
+        modals.setEditingConnection({ ...conn, password: password || "" });
+        modals.openModal("connectionModal");
+      } catch (err) {
+        console.error("Error retrieving password from keychain:", err);
+        modals.setEditingConnection(conn);
+        modals.openModal("connectionModal");
+      }
+    },
+    [modals]
+  );
 
   const runQuery = useCallback(async () => {
-    if (!connectedRef.current) {
-      setStatus("Please connect to a database first");
-      return;
-    }
-
-    if (!query.trim()) {
-      setStatus("Please enter a query");
-      return;
-    }
-
-    // Read-only mode validation
-    if (readOnlyMode) {
-      const trimmedQuery = query.trim().toUpperCase();
-      const isAllowed = READ_ONLY_COMMANDS.some(cmd => trimmedQuery.startsWith(cmd));
-
-      if (!isAllowed) {
-        setStatus(ERROR_MESSAGES.READ_ONLY_MODE);
-        return;
+    const { status } = await queryExecution.runQuery(
+      connection.config,
+      connection.connectedRef,
+      layout.readOnlyMode,
+      async (result) => {
+        await storage.addToHistory(
+          queryExecution.query,
+          connection.config.name,
+          result.execution_time_ms,
+          result.row_count
+        );
       }
-    }
-
-    setLoading(true);
-    setStatus("");
-
-    try {
-      const queryResult = await executeQuery(config, query);
-
-      setResult(queryResult);
-      setStatus("Query executed successfully");
-
-      // Save to history
-      await saveQueryToHistory(
-        query,
-        config.name,
-        queryResult.execution_time_ms,
-        queryResult.row_count
-      );
-
-      await loadQueryHistory();
-    } catch (error) {
-      setStatus(`Error executing query: ${error}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [config, query, loadQueryHistory, readOnlyMode]);
+    );
+    connection.setStatus(status);
+  }, [queryExecution, connection, layout.readOnlyMode, storage]);
 
   const handleProjectPathChanged = useCallback(async () => {
-    await loadCurrentProjectPath();
-    await loadSavedConnections();
-    await loadQueryHistory();
-    await loadSavedQueries();
-    setStatus("Project location changed - data reloaded");
-  }, [
-    loadCurrentProjectPath,
-    loadSavedConnections,
-    loadQueryHistory,
-    loadSavedQueries,
-  ]);
-
-  const handleTableClick = useCallback((tableName: string) => {
-    setQuery(`SELECT * FROM ${tableName} LIMIT ${DEFAULTS.QUERY_LIMIT};`);
-  }, []);
-
-  const handleTableInsert = useCallback((tableName: string) => {
-    if (insertSnippet) {
-      const snippet = `INSERT INTO ${tableName} (\${1:column1}, \${2:column2}) VALUES (\${3:value1}, \${4:value2});`;
-      insertSnippet(snippet);
-    } else {
-      setQuery(`INSERT INTO ${tableName} (column1, column2) VALUES (value1, value2);`);
-    }
-  }, [insertSnippet]);
-
-  const handleTableUpdate = useCallback((tableName: string) => {
-    if (insertSnippet) {
-      const snippet = `UPDATE ${tableName} SET \${1:column1} = \${2:value1} WHERE \${3:condition};`;
-      insertSnippet(snippet);
-    } else {
-      setQuery(`UPDATE ${tableName} SET column1 = value1 WHERE condition;`);
-    }
-  }, [insertSnippet]);
-
-  const handleTableDelete = useCallback((tableName: string) => {
-    if (insertSnippet) {
-      const snippet = `DELETE FROM ${tableName} WHERE \${1:condition};`;
-      insertSnippet(snippet);
-    } else {
-      setQuery(`DELETE FROM ${tableName} WHERE condition;`);
-    }
-  }, [insertSnippet]);
-
-  const handleColumnClick = useCallback(
-    (tableName: string, columnName: string) => {
-      if (insertAtCursor) {
-        insertAtCursor(`${tableName}.${columnName}`);
-      }
-    },
-    [insertAtCursor],
-  );
+    await project.loadCurrentProjectPath();
+    await storage.loadSavedConnections();
+    await storage.loadQueryHistory();
+    await storage.loadSavedQueries();
+    connection.setStatus("Project location changed - data reloaded");
+  }, [project, storage, connection]);
 
   const handleClearHistory = useCallback(async () => {
     try {
-      await clearQueryHistory();
-      await loadQueryHistory();
-      setStatus("History cleared");
+      await storage.clearHistory();
+      connection.setStatus("History cleared");
     } catch (error) {
-      setStatus(`Failed to clear history: ${error}`);
+      connection.setStatus(`Failed to clear history: ${error}`);
     }
-  }, [loadQueryHistory]);
+  }, [storage, connection]);
 
-  const handleConnectionChange = useCallback(async (value: string) => {
-    // Handle "New Connection" option
-    if (value === "__new__") {
-      setShowConnectionModal(true);
-      return;
-    }
-
-    const conn = connections.find((c) => c.name === value);
-    if (conn) {
-      // Fetch password from keychain
-      const password = await getConnectionPassword(conn.name);
-      const connWithPassword = { ...conn, password: password || "" };
-
-      setConfig(connWithPassword);
-      // Set read-only mode based on connection setting
-      setReadOnlyMode(conn.readOnly || false);
-      // Auto-connect when switching connections
-      setLoading(true);
-      setStatus("");
-      try {
-        const result = await testPostgresConnection(connWithPassword);
-        setStatus(result);
-        setConnected(true);
-        connectedRef.current = true;
-
-        // Load available schemas
-        const schemas = await getDatabaseSchemas(connWithPassword);
-        setAvailableSchemas(schemas);
-
-        // Load schema after successful connection (default to 'public')
-        const dbSchema = await getDatabaseSchema(connWithPassword, "public");
-        setSchema(dbSchema);
-        setSelectedSchema("public");
-
-        // Save as last connection for auto-connect
-        await setLastConnection(conn.name);
-      } catch (error) {
-        setStatus(`Connection failed: ${error}`);
-        setConnected(false);
-        connectedRef.current = false;
-        setSchema(null);
-      } finally {
-        setLoading(false);
+  const handleConnectionChange = useCallback(
+    async (value: string) => {
+      if (value === "__new__") {
+        modals.openModal("connectionModal");
+        return;
       }
-    }
-  }, [connections]);
 
-  const handleProjectChange = useCallback(async (path: string) => {
-    try {
-      // Set the new project path
-      await setProjectPath(path);
+      await connection.switchConnection(value, storage.connections);
+      const conn = storage.connections.find((c) => c.name === value);
+      if (conn) {
+        layout.setReadOnlyMode(conn.readOnly || false);
+      }
+    },
+    [connection, storage.connections, modals, layout]
+  );
 
-      // Update current project path
-      setCurrentProjectPath(path);
-
-      // Reload all project-specific data
-      await loadSavedConnections();
-      loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
-      loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
-      loadRecentProjects().catch((err) => console.error("Failed to load recent projects:", err));
-
-      // Clear current connection and schema
-      setConnected(false);
-      connectedRef.current = false;
-      setSchema(null);
-      setResult(null);
-      setStatus(`Switched to project: ${path}`);
-    } catch (error) {
-      setStatus(`Failed to switch project: ${error}`);
-      console.error("Failed to switch project:", error);
-    }
-  }, [loadSavedConnections, loadQueryHistory, loadSavedQueries, loadRecentProjects]);
+  const handleProjectChange = useCallback(
+    async (path: string) => {
+      try {
+        await project.changeProject(path);
+        await storage.refreshAll();
+        connection.disconnect();
+        queryExecution.setResult(null);
+        connection.setStatus(`Switched to project: ${path}`);
+      } catch (error) {
+        connection.setStatus(`Failed to switch project: ${error}`);
+        console.error("Failed to switch project:", error);
+      }
+    },
+    [project, storage, connection, queryExecution]
+  );
 
   const handleExecuteFromPalette = useCallback(
     (q: string) => {
-      setQuery(q);
-      setShowCommandPalette(false);
+      queryExecution.setQuery(q);
+      modals.closeModal("commandPalette");
       runQuery();
     },
-    [runQuery],
+    [queryExecution, modals, runQuery]
   );
 
-  const handleSchemaChange = useCallback(async (schemaName: string) => {
-    if (!connected || !config) return;
-
-    setSelectedSchema(schemaName);
-    setLoading(true);
-
-    try {
-      const dbSchema = await getDatabaseSchema(config, schemaName);
-      setSchema(dbSchema);
-      setStatus(`Loaded schema: ${schemaName}`);
-    } catch (error) {
-      setStatus(`Failed to load schema ${schemaName}: ${error}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [connected, config]);
-
-  const exportToCSV = useCallback(() => {
-    if (!result) return;
-
-    // Create CSV header
-    const csv = [
-      result.columns.join(","),
-      ...result.rows.map((row) =>
-        row
-          .map((cell) => {
-            // Handle null, quotes, and commas
-            if (cell === null) return "";
-            const str = String(cell);
-            if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-              return `"${str.replace(/"/g, '""')}"`;
-            }
-            return str;
-          })
-          .join(","),
-      ),
-    ].join("\n");
-
-    // Create download link
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `query_results_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }, [result]);
-
-  const exportToJSON = useCallback(() => {
-    if (!result) return;
-
-    // Convert rows to objects with column names as keys
-    const data = result.rows.map((row) => {
-      const obj: Record<string, unknown> = {};
-      result.columns.forEach((col, idx) => {
-        obj[col] = row[idx];
-      });
-      return obj;
-    });
-
-    const json = JSON.stringify(data, null, 2);
-
-    // Create download link
-    const blob = new Blob([json], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `query_results_${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }, [result]);
-
   // Render full-page schema comparison if active
-  if (showSchemaComparison) {
+  if (modals.modals.schemaComparison) {
     return (
       <SchemaComparisonPage
-        connections={connections}
-        onClose={() => setShowSchemaComparison(false)}
+        connections={storage.connections}
+        onClose={() => modals.closeModal("schemaComparison")}
       />
     );
   }
@@ -679,21 +293,21 @@ export default function AppNew() {
     <SidebarProvider>
       <div className="flex h-screen w-full">
         <AppSidebar
-          schema={schema}
-          availableSchemas={availableSchemas}
-          selectedSchema={selectedSchema}
-          onSchemaChange={handleSchemaChange}
-          history={history}
-          savedQueries={savedQueries}
-          onTableClick={handleTableClick}
-          onColumnClick={handleColumnClick}
-          onSelectQuery={setQuery}
+          schema={connection.schema}
+          availableSchemas={connection.availableSchemas}
+          selectedSchema={connection.selectedSchema}
+          onSchemaChange={connection.switchSchema}
+          history={storage.history}
+          savedQueries={storage.savedQueries}
+          onTableClick={queryExecution.handleTableClick}
+          onColumnClick={queryExecution.handleColumnClick}
+          onSelectQuery={queryExecution.setQuery}
           onDeleteQuery={handleDeleteSavedQuery}
           onTogglePin={handleTogglePin}
           onClearHistory={handleClearHistory}
-          onTableInsert={handleTableInsert}
-          onTableUpdate={handleTableUpdate}
-          onTableDelete={handleTableDelete}
+          onTableInsert={queryExecution.handleTableInsert}
+          onTableUpdate={queryExecution.handleTableUpdate}
+          onTableDelete={queryExecution.handleTableDelete}
         />
 
         <SidebarInset className="flex flex-col">
@@ -711,25 +325,25 @@ export default function AppNew() {
 
             {/* Environment/Connection Dropdown */}
             <div data-tauri-drag-region="false" className="min-w-[180px]">
-              <Select value={config.name} onValueChange={handleConnectionChange}>
+              <Select value={connection.config.name} onValueChange={handleConnectionChange}>
                 <SelectTrigger className="h-7 border-none shadow-none text-sm font-medium hover:bg-accent">
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
                       className={`h-2 w-2 rounded-full p-0 ${
-                        connected ? "bg-green-500" : "bg-gray-500"
+                        connection.connected ? "bg-green-500" : "bg-gray-500"
                       }`}
                     />
                     <SelectValue placeholder="No connection" />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {connections.map((conn) => (
+                  {storage.connections.map((conn) => (
                     <SelectItem key={conn.name} value={conn.name}>
                       <div className="flex items-center gap-2">
                         <div
                           className={`h-2 w-2 rounded-full ${
-                            conn.name === config.name
+                            conn.name === connection.config.name
                               ? "bg-green-500"
                               : "bg-gray-500"
                           }`}
@@ -753,10 +367,9 @@ export default function AppNew() {
             {/* Project Selector Dropdown */}
             <div data-tauri-drag-region="false" className="min-w-[150px]">
               <Select
-                value={currentProjectPath || "default"}
+                value={project.currentProjectPath || "default"}
                 onValueChange={(value) => {
                   if (value === "__browse__") {
-                    // Open file picker for browsing
                     import("@tauri-apps/plugin-dialog")
                       .then(({ open }) => {
                         return open({
@@ -771,7 +384,7 @@ export default function AppNew() {
                       })
                       .catch((err) => {
                         console.error("Failed to open file dialog:", err);
-                        setStatus("Failed to open file dialog");
+                        connection.setStatus("Failed to open file dialog");
                       });
                   } else if (value !== "default") {
                     handleProjectChange(value);
@@ -785,10 +398,10 @@ export default function AppNew() {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {recentProjects.length > 0 ? (
-                    recentProjects.map((project) => (
-                      <SelectItem key={project.path} value={project.path}>
-                        {project.name || project.path.split("/").pop() || "Project"}
+                  {project.recentProjects.length > 0 ? (
+                    project.recentProjects.map((proj) => (
+                      <SelectItem key={proj.path} value={proj.path}>
+                        {proj.name || proj.path.split("/").pop() || "Project"}
                       </SelectItem>
                     ))
                   ) : (
@@ -811,15 +424,15 @@ export default function AppNew() {
             {/* Read-only mode toggle */}
             <div data-tauri-drag-region="false">
               <Button
-                variant={readOnlyMode ? "default" : "ghost"}
+                variant={layout.readOnlyMode ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setReadOnlyMode(!readOnlyMode)}
+                onClick={() => layout.setReadOnlyMode(!layout.readOnlyMode)}
                 title={
-                  readOnlyMode ? "Read-only mode active" : "Enable read-only mode"
+                  layout.readOnlyMode ? "Read-only mode active" : "Enable read-only mode"
                 }
                 className="h-7 gap-1.5"
               >
-                {readOnlyMode ? (
+                {layout.readOnlyMode ? (
                   <Lock className="h-3 w-3" />
                 ) : (
                   <Unlock className="h-3 w-3" />
@@ -833,20 +446,16 @@ export default function AppNew() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() =>
-                  setLayoutDirection(
-                    layoutDirection === "vertical" ? "horizontal" : "vertical",
-                  )
-                }
-                title={`Switch to ${layoutDirection === "vertical" ? "horizontal" : "vertical"} layout`}
+                onClick={layout.toggleLayoutDirection}
+                title={`Switch to ${layout.layoutDirection === "vertical" ? "horizontal" : "vertical"} layout`}
                 className="h-7 w-7"
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
               </Button>
               <Button
-                variant={showErd ? "default" : "ghost"}
+                variant={modals.modals.erd ? "default" : "ghost"}
                 size="icon"
-                onClick={() => setShowErd(!showErd)}
+                onClick={() => modals.toggleModal("erd")}
                 title="Toggle ERD (Entity Relationship Diagram)"
                 className="h-7 w-7"
               >
@@ -855,7 +464,7 @@ export default function AppNew() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowCommandPalette(true)}
+                onClick={() => modals.openModal("commandPalette")}
                 className="h-7 gap-1.5"
               >
                 <Command className="h-3 w-3" />
@@ -864,7 +473,7 @@ export default function AppNew() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowQueryBuilder(true)}
+                onClick={() => modals.openModal("queryBuilder")}
                 className="h-7 gap-1.5"
                 title="Query Builder"
               >
@@ -874,7 +483,7 @@ export default function AppNew() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowSchemaComparison(true)}
+                onClick={() => modals.openModal("schemaComparison")}
                 className="h-7 w-7"
                 title="Compare Schemas"
               >
@@ -883,9 +492,9 @@ export default function AppNew() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowSettings(true)}
+                onClick={() => modals.openModal("settings")}
                 className="h-7 w-7"
-                title="Settings (⌘,)"
+                title="Settings (Cmd+,)"
               >
                 <SettingsIcon className="h-3.5 w-3.5" />
               </Button>
@@ -894,9 +503,9 @@ export default function AppNew() {
 
           {/* Main Content with Resizable Panels */}
           <div className="flex-1 overflow-hidden">
-            <ResizablePanelGroup direction={layoutDirection}>
+            <ResizablePanelGroup direction={layout.layoutDirection}>
               {/* SQL Editor Panel - Hidden in full-screen mode */}
-              {!fullScreenResults && (
+              {!layout.fullScreenResults && (
                 <>
                   <ResizablePanel defaultSize={UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                     <div className="flex h-full flex-col min-h-0">
@@ -904,17 +513,9 @@ export default function AppNew() {
                         <h3 className="text-sm font-medium">Query Editor</h3>
                         <div className="flex items-center gap-2">
                           <Button
-                            variant={vimMode ? "default" : "outline"}
+                            variant={layout.vimMode ? "default" : "outline"}
                             size="sm"
-                            onClick={async () => {
-                              const newVimMode = !vimMode;
-                              setVimMode(newVimMode);
-                              try {
-                                await setVimModeEnabled(newVimMode);
-                              } catch (error) {
-                                console.error("Failed to save vim mode setting:", error);
-                              }
-                            }}
+                            onClick={() => layout.setVimMode(!layout.vimMode)}
                             title="Toggle Vim mode"
                           >
                             <span className="text-xs font-mono">VIM</span>
@@ -922,7 +523,7 @@ export default function AppNew() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setShowSaveModal(true)}
+                            onClick={() => modals.openModal("saveModal")}
                             title="Save Query"
                           >
                             <Save className="h-3 w-3 mr-1" />
@@ -930,7 +531,7 @@ export default function AppNew() {
                           <Button
                             size="sm"
                             onClick={runQuery}
-                            disabled={loading}
+                            disabled={queryExecution.loading || connection.loading}
                             className="gap-2"
                             title="Run Query"
                           >
@@ -940,20 +541,20 @@ export default function AppNew() {
                       </div>
                       <div className="flex-1">
                         <SqlEditor
-                          value={query}
-                          onChange={setQuery}
+                          value={queryExecution.query}
+                          onChange={queryExecution.setQuery}
                           onRunQuery={runQuery}
-                          schema={schema}
+                          schema={connection.schema}
                           onEditorReady={(insertAt, insertSnip) => {
-                            setInsertAtCursor(() => insertAt);
-                            setInsertSnippet(() => insertSnip);
+                            queryExecution.setInsertAtCursor(insertAt);
+                            queryExecution.setInsertSnippet(insertSnip);
                           }}
-                          vimMode={vimMode}
+                          vimMode={layout.vimMode}
                         />
                       </div>
-                      {status && (
+                      {connection.status && (
                         <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-                          {status}
+                          {connection.status}
                         </div>
                       )}
                     </div>
@@ -964,28 +565,28 @@ export default function AppNew() {
               )}
 
               {/* Results Panel */}
-              <ResizablePanel defaultSize={fullScreenResults ? 100 : UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
+              <ResizablePanel defaultSize={layout.fullScreenResults ? 100 : UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                 <div className="flex h-full flex-col min-h-0">
                   <div className="flex items-center justify-between border-b px-4 py-2">
-                    <h3 className="text-sm font-medium">{showErd ? "ERD" : "Results"}</h3>
-                    {result && !showErd && (
+                    <h3 className="text-sm font-medium">{modals.modals.erd ? "ERD" : "Results"}</h3>
+                    {queryExecution.result && !modals.modals.erd && (
                       <div className="flex items-center gap-2">
                         <Button
-                          variant={fullScreenResults ? "default" : "outline"}
+                          variant={layout.fullScreenResults ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setFullScreenResults(!fullScreenResults)}
+                          onClick={layout.toggleFullScreenResults}
                           title="Toggle full-screen results (Cmd+Shift+F)"
                         >
-                          {fullScreenResults ? (
+                          {layout.fullScreenResults ? (
                             <Minimize className="h-3 w-3" />
                           ) : (
                             <Maximize className="h-3 w-3" />
                           )}
                         </Button>
                         <Button
-                          variant={compactView ? "default" : "outline"}
+                          variant={layout.compactView ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setCompactView(!compactView)}
+                          onClick={() => layout.setCompactView(!layout.compactView)}
                           title="Toggle compact view"
                         >
                           <span className="text-xs">Compact</span>
@@ -993,7 +594,7 @@ export default function AppNew() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={exportToCSV}
+                          onClick={queryExecution.exportToCSV}
                           title="Export as CSV"
                         >
                           <Download className="h-3 w-3 mr-1" />
@@ -1002,7 +603,7 @@ export default function AppNew() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={exportToJSON}
+                          onClick={queryExecution.exportToJSON}
                           title="Export as JSON"
                         >
                           <Download className="h-3 w-3 mr-1" />
@@ -1011,15 +612,15 @@ export default function AppNew() {
                       </div>
                     )}
                   </div>
-                  {showErd ? (
-                    <ErdDiagram schema={schema} />
+                  {modals.modals.erd ? (
+                    <ErdDiagram schema={connection.schema} />
                   ) : (
                     <ResultsTableEnhanced
-                      result={result}
-                      compact={compactView}
-                      config={config}
-                      schema={schema}
-                      originalQuery={query}
+                      result={queryExecution.result}
+                      compact={layout.compactView}
+                      config={connection.config}
+                      schema={connection.schema}
+                      originalQuery={queryExecution.query}
                       onRefresh={runQuery}
                     />
                   )}
@@ -1032,68 +633,64 @@ export default function AppNew() {
 
       {/* Modals */}
       <SaveQueryModal
-        isOpen={showSaveModal}
-        onClose={() => setShowSaveModal(false)}
+        isOpen={modals.modals.saveModal}
+        onClose={() => modals.closeModal("saveModal")}
         onSave={handleSaveQuery}
-        currentQuery={query}
+        currentQuery={queryExecution.query}
       />
 
       <CommandPalette
-        isOpen={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
-        schema={schema}
-        history={history}
-        savedQueries={savedQueries}
+        isOpen={modals.modals.commandPalette}
+        onClose={() => modals.closeModal("commandPalette")}
+        schema={connection.schema}
+        history={storage.history}
+        savedQueries={storage.savedQueries}
         onExecuteQuery={handleExecuteFromPalette}
       />
 
       <QueryBuilder
-        isOpen={showQueryBuilder}
-        onClose={() => setShowQueryBuilder(false)}
-        schema={schema}
-        onExecuteQuery={(query) => {
-          setQuery(query);
+        isOpen={modals.modals.queryBuilder}
+        onClose={() => modals.closeModal("queryBuilder")}
+        schema={connection.schema}
+        onExecuteQuery={(q) => {
+          queryExecution.setQuery(q);
           runQuery();
         }}
       />
 
       <Settings
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        currentProjectPath={currentProjectPath}
+        isOpen={modals.modals.settings}
+        onClose={() => modals.closeModal("settings")}
+        currentProjectPath={project.currentProjectPath}
         onProjectPathChange={handleProjectPathChanged}
-        vimMode={vimMode}
-        onVimModeChange={setVimMode}
-        compactView={compactView}
-        onCompactViewChange={setCompactView}
-        layoutDirection={layoutDirection}
-        onLayoutDirectionChange={setLayoutDirection}
-        connections={connections}
+        vimMode={layout.vimMode}
+        onVimModeChange={(enabled) => layout.setVimMode(enabled)}
+        compactView={layout.compactView}
+        onCompactViewChange={layout.setCompactView}
+        layoutDirection={layout.layoutDirection}
+        onLayoutDirectionChange={layout.setLayoutDirection}
+        connections={storage.connections}
         onDeleteConnection={handleDeleteConnection}
         onEditConnection={handleEditConnection}
         onNewConnection={() => {
-          setEditingConnection(null);
-          setShowConnectionModal(true);
+          modals.setEditingConnection(null);
+          modals.openModal("connectionModal");
         }}
       />
 
       <ProjectSettings
-        isOpen={showProjectPicker}
-        onClose={() => setShowProjectPicker(false)}
+        isOpen={modals.modals.projectPicker}
+        onClose={() => modals.closeModal("projectPicker")}
         onPathChanged={handleProjectPathChanged}
-        currentPath={currentProjectPath}
+        currentPath={project.currentProjectPath}
       />
 
       <ConnectionModal
-        isOpen={showConnectionModal}
-        onClose={() => {
-          setShowConnectionModal(false);
-          setEditingConnection(null);
-        }}
+        isOpen={modals.modals.connectionModal}
+        onClose={() => modals.closeModal("connectionModal")}
         onSave={handleSaveConnection}
-        initialConnection={editingConnection}
+        initialConnection={modals.editingConnection}
       />
-
     </SidebarProvider>
   );
 }

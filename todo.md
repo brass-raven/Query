@@ -2,6 +2,26 @@
 
 A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 
+### Priority Features
+- [ ] remove all the damn use states. need to refactor the AppNew file.
+- [ ] better styling: 
+  - sidebar pushed everything around
+  - colors of the text area is not the same as the rest of the app
+
+### Future Features
+- [ ] robust table manipulation (create, alter, drop tables from UI)
+- [ ] variables system, e.g. ${1:text} in the query editor then have a variable editor to edit them.
+- [ ] other database types:
+  - mysql
+  - mongodb (nosql)
+### Low Priority
+- [ ] cancel query (abort long-running queries)
+- [ ] break out large files to separate files
+- [ ] general refactoring and cleanup
+- [ ] github action workflow for building and publishing
+- [ ] better git integration: view the diffs.
+- [ ] address all build errors & warnings.
+
 ## Core Features (Completed)
 - [x] query history
 - [x] intellisense
@@ -108,21 +128,5 @@ A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 - [x] cmd+k should have better query abilities, for example, when i say select user i should be able to say "where ..." and there should be autocomplete for the columns
 - [x] db url parse not allowing to paste in.
 
-### Priority Features
-- [ ] remove all the damn use states. need to refactor the AppNew file.
-
-### Future Features
-- [ ] robust table manipulation (create, alter, drop tables from UI)
-- [ ] variables system, e.g. ${1:text} in the query editor then have a variable editor to edit them.
-- [ ] other database types:
-  - mysql
-  - mongodb (nosql)
-### Low Priority
-- [ ] cancel query (abort long-running queries)
-- [ ] break out large files to separate files
-- [ ] general refactoring and cleanup
-- [ ] github action workflow for building and publishing
-- [ ] better git integration: view the diffs.
-- [ ] address all build errors & warnings.
 
 ---

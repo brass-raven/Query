@@ -136,13 +136,15 @@ export const AppSidebar = memo(function AppSidebar({
     setExpandedTables(newExpanded);
   };
 
-  // Handle sidebar resize
+  // Handle sidebar resize by updating CSS variable
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
       const newWidth = e.clientX;
       if (newWidth >= 200 && newWidth <= 500) {
         setSidebarWidth(newWidth);
+        // Update CSS variable so shadcn sidebar respects the width
+        document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
       }
     };
 
@@ -160,6 +162,11 @@ export const AppSidebar = memo(function AppSidebar({
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing]);
+
+  // Set initial sidebar width CSS variable on mount
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-width', `${sidebarWidth}px`);
+  }, []);
 
   // Fetch git status on mount and poll every 10 seconds
   useEffect(() => {
@@ -192,8 +199,8 @@ export const AppSidebar = memo(function AppSidebar({
   const unpinnedQueries = savedQueries.filter((q) => !q.is_pinned);
 
   return (
-    <div className="relative flex" style={{ width: `${sidebarWidth}px` }}>
-      <Sidebar style={{ width: `${sidebarWidth}px` }}>
+    <div className="relative flex w-(--sidebar-width)">
+      <Sidebar>
       <SidebarContent>
         <ScrollArea className={`h-[calc(100vh-${SIDEBAR_FOOTER_HEIGHT}px)]`}>
           <SidebarGroup>

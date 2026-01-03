@@ -73,7 +73,13 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
     // Store editor instance
     editorRef.current = editor;
 
-    // Define custom theme matching app's dark color scheme
+    // Define custom theme matching app's dark color scheme (CSS variables)
+    // --card: hsl(224 71.4% 4.1%) ≈ #050a14
+    // --background: hsl(229 12% 11%) ≈ #181b20
+    // --border/muted: hsl(215 27.9% 16.9%) ≈ #1f2937
+    // --muted-foreground: hsl(217.9 10.6% 64.9%) ≈ #9ca3af
+    // --foreground: hsl(210 20% 98%) ≈ #f8fafc
+    // --primary: hsl(262.1 83.3% 57.8%) ≈ #8b5cf6
     monaco.editor.defineTheme('query-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -81,30 +87,30 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
         { token: 'keyword.sql', foreground: '8b5cf6', fontStyle: 'bold' },
         { token: 'string.sql', foreground: '34d399' },
         { token: 'number', foreground: 'f59e0b' },
-        { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
+        { token: 'comment', foreground: '9ca3af', fontStyle: 'italic' },
         { token: 'operator.sql', foreground: '60a5fa' },
       ],
       colors: {
-        'editor.background': '#0a0a0f', // matches card background hsl(224 71.4% 4.1%)
-        'editor.foreground': '#fafafa', // matches foreground
-        'editor.lineHighlightBackground': '#1c1c27', // slightly lighter than bg
-        'editor.selectionBackground': '#7c3aed40', // primary with opacity
-        'editor.inactiveSelectionBackground': '#7c3aed20',
-        'editorLineNumber.foreground': '#6b7280', // muted
+        'editor.background': '#050a14', // --card: hsl(224 71.4% 4.1%)
+        'editor.foreground': '#f8fafc', // --foreground: hsl(210 20% 98%)
+        'editor.lineHighlightBackground': '#181b20', // --background
+        'editor.selectionBackground': '#8b5cf640', // --primary with opacity
+        'editor.inactiveSelectionBackground': '#8b5cf620',
+        'editorLineNumber.foreground': '#9ca3af', // --muted-foreground
         'editorLineNumber.activeForeground': '#a78bfa', // primary lighter
-        'editorCursor.foreground': '#a78bfa', // primary
-        'editor.selectionHighlightBackground': '#7c3aed20',
-        'editorWhitespace.foreground': '#374151',
-        'editorIndentGuide.background': '#374151',
-        'editorIndentGuide.activeBackground': '#6b7280',
-        'editorSuggestWidget.background': '#18181b',
-        'editorSuggestWidget.border': '#3f3f46',
-        'editorSuggestWidget.foreground': '#fafafa',
-        'editorSuggestWidget.selectedBackground': '#7c3aed40',
-        'editorWidget.background': '#18181b',
-        'editorWidget.border': '#3f3f46',
-        'input.background': '#18181b',
-        'input.border': '#3f3f46',
+        'editorCursor.foreground': '#a78bfa', // primary lighter
+        'editor.selectionHighlightBackground': '#8b5cf620',
+        'editorWhitespace.foreground': '#1f2937', // --border
+        'editorIndentGuide.background': '#1f2937', // --border
+        'editorIndentGuide.activeBackground': '#9ca3af', // --muted-foreground
+        'editorSuggestWidget.background': '#181b20', // --background
+        'editorSuggestWidget.border': '#1f2937', // --border
+        'editorSuggestWidget.foreground': '#f8fafc', // --foreground
+        'editorSuggestWidget.selectedBackground': '#8b5cf640', // --primary with opacity
+        'editorWidget.background': '#181b20', // --background
+        'editorWidget.border': '#1f2937', // --border
+        'input.background': '#181b20', // --background
+        'input.border': '#1f2937', // --border
       },
     });
 

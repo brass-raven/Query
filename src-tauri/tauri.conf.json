@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "",
-        "width": 800,
-        "height": 600,
+        "title": "Query",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
       }
@@ -33,12 +35,29 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "publisher": "Brass Raven",
+    "category": "DeveloperTool",
+    "shortDescription": "Modern PostgreSQL client",
+    "longDescription": "A fast, modern PostgreSQL client built with Tauri, React, and TypeScript. Features include SQL IntelliSense, schema browsing, query history, vim mode, and more.",
+    "copyright": "Copyright 2025 Brass Raven",
+    "licenseFile": "../LICENSE",
     "macOS": {
       "entitlements": "entitlements.plist",
       "exceptionDomain": "",
       "frameworks": [],
       "providerShortName": null,
-      "signingIdentity": null
+      "signingIdentity": null,
+      "minimumSystemVersion": "12.0"
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com"
+    },
+    "linux": {
+      "appId": "com.brassraven.query",
+      "section": "devel",
+      "priority": "optional"
     }
   }
 }

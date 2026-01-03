@@ -240,7 +240,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
         }
 
         // Default read-only rendering (show dirty value if exists)
-        if (value === null) return <span className="text-gray-500 italic">null</span>;
+        if (value === null) return <span className="text-muted-foreground italic">null</span>;
         if (typeof value === "boolean") return value ? "true" : "false";
         if (typeof value === "object") return JSON.stringify(value);
         return String(value);
@@ -322,18 +322,18 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
 
   if (!result) {
     return (
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
-        <p className="text-gray-500 text-sm">No results yet</p>
-        <p className="text-gray-600 text-xs mt-2">Run a query to see results</p>
+      <div className="bg-card rounded-lg border border-border p-8 text-center">
+        <p className="text-muted-foreground text-sm">No results yet</p>
+        <p className="text-muted-foreground/70 text-xs mt-2">Run a query to see results</p>
       </div>
     );
   }
 
   if (result.rows.length === 0) {
     return (
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
-        <p className="text-gray-400 text-sm">Query executed successfully</p>
-        <p className="text-gray-500 text-xs mt-2">
+      <div className="bg-card rounded-lg border border-border p-8 text-center">
+        <p className="text-foreground/80 text-sm">Query executed successfully</p>
+        <p className="text-muted-foreground text-xs mt-2">
           No rows returned • {result.execution_time_ms}ms
         </p>
       </div>
@@ -571,14 +571,14 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-2 text-left text-xs font-semibold text-gray-400 border border-gray-700"
+                    className="px-4 py-2 text-left text-xs font-semibold text-muted-foreground border border-border"
                   >
                     {header.isPlaceholder ? null : (
                       <div>
                         <div
                           className={`flex items-center gap-2 ${
                             header.column.getCanSort()
-                              ? "cursor-pointer select-none hover:text-gray-200"
+                              ? "cursor-pointer select-none hover:text-foreground"
                               : ""
                           }`}
                           onClick={header.column.getToggleSortingHandler()}
@@ -602,7 +602,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
                               header.column.setFilterValue(e.target.value)
                             }
                             placeholder="Filter..."
-                            className="mt-1 w-full px-2 py-1 text-xs bg-gray-800 rounded border border-gray-700 focus:border-blue-500 focus:outline-none"
+                            className="mt-1 w-full px-2 py-1 text-xs bg-card rounded border border-border focus:border-primary focus:outline-none"
                             onClick={(e) => e.stopPropagation()}
                           />
                         )}
@@ -625,14 +625,14 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
                 <tr
                   key={row.id}
                   className={cn(
-                    "border border-gray-700 hover:bg-gray-700/50 transition-colors",
+                    "border border-border hover:bg-muted/50 transition-colors",
                     row.getIsSelected() && "bg-primary/10 border-primary/30"
                   )}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-4 py-2 text-gray-300 font-mono text-xs max-w-md truncate border"
+                      className="px-4 py-2 text-foreground/80 font-mono text-xs max-w-md truncate border"
                       title={String(cell.getValue() ?? "")}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
