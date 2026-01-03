@@ -65,7 +65,7 @@ export const EditableCell = memo(function EditableCell({
   if (value === null && !isEditing) {
     return (
       <div
-        className="text-gray-500 italic px-2 py-1 cursor-pointer h-full"
+        className="text-muted-foreground italic px-2 py-1 cursor-pointer h-full"
         onDoubleClick={handleDoubleClick}
       >
         null
@@ -112,8 +112,8 @@ export const EditableCell = memo(function EditableCell({
   // Display mode
   return (
     <div
-      className={`px-2 py-1 cursor-pointer h-full ${
-        isDirty ? 'border-l-2 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20' : ''
+      className={`px-2 py-1 cursor-pointer h-full transition-colors ${
+        isDirty ? 'border-l-2 border-l-primary bg-primary/5' : 'hover:bg-muted/30'
       }`}
       onDoubleClick={handleDoubleClick}
       title="Double-click to edit"

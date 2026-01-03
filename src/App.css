@@ -107,6 +107,17 @@
     --sidebar-accent-foreground: hsl(210 20% 0%);
     --sidebar-border: hsl(215 28% 64%);
     --sidebar-ring: hsl(262 83% 45%);
+
+    /* Semantic query type colors */
+    --query-select: hsl(217 91% 50%);
+    --query-insert: hsl(142 71% 40%);
+    --query-update: hsl(48 96% 45%);
+    --query-delete: hsl(0 84% 50%);
+
+    /* Status colors */
+    --status-success: hsl(142 71% 40%);
+    --status-error: hsl(0 84% 50%);
+    --status-warning: hsl(48 96% 45%);
   }
 
   .dark {
@@ -144,6 +155,17 @@
     --sidebar-accent-foreground: hsl(210 20% 98%);
     --sidebar-border: hsl(215 28% 9%);
     --sidebar-ring: hsl(263 70% 42%);
+
+    /* Semantic query type colors */
+    --query-select: hsl(217 91% 60%);
+    --query-insert: hsl(142 71% 45%);
+    --query-update: hsl(48 96% 53%);
+    --query-delete: hsl(0 84% 60%);
+
+    /* Status colors */
+    --status-success: hsl(142 71% 45%);
+    --status-error: hsl(0 84% 60%);
+    --status-warning: hsl(48 96% 53%);
   }
 
 @theme inline {
@@ -183,6 +205,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Semantic query type colors */
+  --color-query-select: var(--query-select);
+  --color-query-insert: var(--query-insert);
+  --color-query-update: var(--query-update);
+  --color-query-delete: var(--query-delete);
+
+  /* Status colors */
+  --color-status-success: var(--status-success);
+  --color-status-error: var(--status-error);
+  --color-status-warning: var(--status-warning);
 }
 
 @layer base {

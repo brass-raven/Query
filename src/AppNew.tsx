@@ -24,7 +24,6 @@ import {
 } from "./components/ui/resizable";
 import { Button } from "./components/ui/button";
 import { Separator } from "./components/ui/separator";
-import { Badge } from "./components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -314,7 +313,7 @@ export default function AppNew() {
           {/* Header */}
           <header
             data-tauri-drag-region
-            className="flex h-9 items-center gap-2 border-b px-3"
+            className="flex h-9 items-center gap-2 border-b border-border/50 bg-card/50 backdrop-blur-sm px-3"
             style={{ paddingLeft: `${MACOS_TITLEBAR_LEFT_PADDING}px` }}
           >
             {/* Left side */}
@@ -326,14 +325,16 @@ export default function AppNew() {
             {/* Environment/Connection Dropdown */}
             <div data-tauri-drag-region="false" className="min-w-[180px]">
               <Select value={connection.config.name} onValueChange={handleConnectionChange}>
-                <SelectTrigger className="h-7 border-none shadow-none text-sm font-medium hover:bg-accent">
+                <SelectTrigger className="h-7 border-none shadow-none text-sm font-medium hover:bg-accent transition-colors">
                   <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={`h-2 w-2 rounded-full p-0 ${
-                        connection.connected ? "bg-green-500" : "bg-gray-500"
-                      }`}
-                    />
+                    <span className="relative flex h-2 w-2">
+                      {connection.connected && (
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-success opacity-75" />
+                      )}
+                      <span className={`relative inline-flex h-2 w-2 rounded-full ${
+                        connection.connected ? "bg-status-success" : "bg-muted-foreground/50"
+                      }`} />
+                    </span>
                     <SelectValue placeholder="No connection" />
                   </div>
                 </SelectTrigger>
@@ -341,11 +342,11 @@ export default function AppNew() {
                   {storage.connections.map((conn) => (
                     <SelectItem key={conn.name} value={conn.name}>
                       <div className="flex items-center gap-2">
-                        <div
+                        <span
                           className={`h-2 w-2 rounded-full ${
-                            conn.name === connection.config.name
-                              ? "bg-green-500"
-                              : "bg-gray-500"
+                            conn.name === connection.config.name && connection.connected
+                              ? "bg-status-success"
+                              : "bg-muted-foreground/50"
                           }`}
                         />
                         {conn.name}
@@ -509,8 +510,8 @@ export default function AppNew() {
                 <>
                   <ResizablePanel defaultSize={UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                     <div className="flex h-full flex-col min-h-0">
-                      <div className="flex items-center justify-between border-b px-4 py-2">
-                        <h3 className="text-sm font-medium">Query Editor</h3>
+                      <div className="flex items-center justify-between border-b border-border/50 bg-muted/30 px-4 py-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Query Editor</h3>
                         <div className="flex items-center gap-2">
                           <Button
                             variant={layout.vimMode ? "default" : "outline"}
@@ -553,7 +554,8 @@ export default function AppNew() {
                         />
                       </div>
                       {connection.status && (
-                        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
+                        <div className="border-t border-border/50 bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                           {connection.status}
                         </div>
                       )}
@@ -567,8 +569,8 @@ export default function AppNew() {
               {/* Results Panel */}
               <ResizablePanel defaultSize={layout.fullScreenResults ? 100 : UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                 <div className="flex h-full flex-col min-h-0">
-                  <div className="flex items-center justify-between border-b px-4 py-2">
-                    <h3 className="text-sm font-medium">{modals.modals.erd ? "ERD" : "Results"}</h3>
+                  <div className="flex items-center justify-between border-b border-border/50 bg-muted/30 px-4 py-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{modals.modals.erd ? "ERD" : "Results"}</h3>
                     {queryExecution.result && !modals.modals.erd && (
                       <div className="flex items-center gap-2">
                         <Button
@@ -622,6 +624,7 @@ export default function AppNew() {
                       schema={connection.schema}
                       originalQuery={queryExecution.query}
                       onRefresh={runQuery}
+                      isLoading={queryExecution.loading}
                     />
                   )}
                 </div>

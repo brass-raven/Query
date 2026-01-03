@@ -21,11 +21,12 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { EyeOff, Search, X, Copy, CheckSquare, Edit3, Save } from "lucide-react";
+import { EyeOff, Search, X, Copy, CheckSquare, Edit3, Save, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { IndeterminateCheckbox } from "../ui/indeterminate-checkbox";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "../ui/skeleton";
 import type { QueryResult, ConnectionConfig, DatabaseSchema } from '../../types';
 import { EditableCell } from './EditableCell';
 import { executeQuery } from "../../utils/tauri";
@@ -40,6 +41,43 @@ interface ResultsTableEnhancedProps {
   schema?: DatabaseSchema | null;
   originalQuery?: string;
   onRefresh?: () => void;
+  isLoading?: boolean;
+}
+
+// Loading skeleton for table
+function TableLoadingSkeleton() {
+  return (
+    <div className="flex flex-col h-full min-h-[200px] bg-card/50 rounded-lg border border-border/50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-border/50 bg-muted/30 flex items-center gap-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-7 w-48" />
+        <div className="ml-auto flex gap-2">
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-7 w-24" />
+        </div>
+      </div>
+      <div className="flex-1 p-4 space-y-3">
+        {/* Header row */}
+        <div className="flex gap-4 pb-3 border-b border-border/30">
+          <Skeleton className="h-4 w-8" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        {/* Data rows */}
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex gap-4 py-2">
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
@@ -49,6 +87,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
   schema,
   originalQuery,
   onRefresh,
+  isLoading = false,
 }: ResultsTableEnhancedProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -320,20 +359,31 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [table, rowSelection]);
 
+  // Show loading skeleton
+  if (isLoading) {
+    return <TableLoadingSkeleton />;
+  }
+
   if (!result) {
     return (
-      <div className="bg-card rounded-lg border border-border p-8 text-center">
-        <p className="text-muted-foreground text-sm">No results yet</p>
-        <p className="text-muted-foreground/70 text-xs mt-2">Run a query to see results</p>
+      <div className="flex flex-col items-center justify-center h-full min-h-[200px] bg-card/50 rounded-lg border border-border/50 p-8">
+        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+          <Search className="h-5 w-5 text-muted-foreground/50" />
+        </div>
+        <p className="text-muted-foreground text-sm font-medium">No results yet</p>
+        <p className="text-muted-foreground/60 text-xs mt-1">Run a query to see results</p>
       </div>
     );
   }
 
   if (result.rows.length === 0) {
     return (
-      <div className="bg-card rounded-lg border border-border p-8 text-center">
-        <p className="text-foreground/80 text-sm">Query executed successfully</p>
-        <p className="text-muted-foreground text-xs mt-2">
+      <div className="flex flex-col items-center justify-center h-full min-h-[200px] bg-card/50 rounded-lg border border-border/50 p-8">
+        <div className="w-12 h-12 rounded-full bg-status-success/10 flex items-center justify-center mb-4">
+          <CheckSquare className="h-5 w-5 text-status-success" />
+        </div>
+        <p className="text-foreground text-sm font-medium">Query executed successfully</p>
+        <p className="text-muted-foreground text-xs mt-1">
           No rows returned • {result.execution_time_ms}ms
         </p>
       </div>
@@ -564,14 +614,17 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
         ref={tableContainerRef}
         className="overflow-auto flex-1"
       >
-        <table className="w-full text-sm border-collapse">
-          <thead className="bg-background sticky top-0 z-10">
+        <table className="w-full text-sm">
+          <thead className="bg-card sticky top-0 z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <tr key={headerGroup.id} className="border-b border-border">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-2 text-left text-xs font-semibold text-muted-foreground border border-border"
+                    className={cn(
+                      "px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
+                      header.column.getIsSorted() && "bg-muted/30 text-foreground"
+                    )}
                   >
                     {header.isPlaceholder ? null : (
                       <div>
@@ -588,8 +641,8 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
                             header.getContext()
                           )}
                           {{
-                            asc: " ↑",
-                            desc: " ↓",
+                            asc: <ChevronUp className="h-3 w-3 text-primary" />,
+                            desc: <ChevronDown className="h-3 w-3 text-primary" />,
                           }[header.column.getIsSorted() as string] ?? null}
                         </div>
                         {!compact && header.column.getCanFilter() && (
@@ -602,7 +655,7 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
                               header.column.setFilterValue(e.target.value)
                             }
                             placeholder="Filter..."
-                            className="mt-1 w-full px-2 py-1 text-xs bg-card rounded border border-border focus:border-primary focus:outline-none"
+                            className="mt-1.5 w-full px-2 py-1 text-xs normal-case tracking-normal font-normal bg-background/50 rounded-md border border-border/50 focus:border-primary focus:ring-1 focus:ring-primary/20 focus:outline-none placeholder:text-muted-foreground/50 transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           />
                         )}
@@ -621,18 +674,21 @@ export const ResultsTableEnhanced = memo(function ResultsTableEnhanced({
             )}
             {virtualRows.map((virtualRow) => {
               const row = rows[virtualRow.index];
+              const isEven = virtualRow.index % 2 === 0;
               return (
                 <tr
                   key={row.id}
                   className={cn(
-                    "border border-border hover:bg-muted/50 transition-colors",
-                    row.getIsSelected() && "bg-primary/10 border-primary/30"
+                    "border-b border-border/50 transition-colors",
+                    isEven ? "bg-transparent" : "bg-muted/20",
+                    "hover:bg-muted/40",
+                    row.getIsSelected() && "bg-primary/10 hover:bg-primary/15 border-l-2 border-l-primary"
                   )}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-4 py-2 text-foreground/80 font-mono text-xs max-w-md truncate border"
+                      className="px-4 py-2 text-foreground/90 font-mono text-xs max-w-md truncate"
                       title={String(cell.getValue() ?? "")}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

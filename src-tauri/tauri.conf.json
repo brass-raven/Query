@@ -55,9 +55,10 @@
       "timestampUrl": "http://timestamp.digicert.com"
     },
     "linux": {
-      "appId": "com.brassraven.query",
-      "section": "devel",
-      "priority": "optional"
+      "deb": {
+        "section": "devel",
+        "priority": "optional"
+      }
     }
   }
 }

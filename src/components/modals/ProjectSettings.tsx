@@ -1,6 +1,17 @@
 import { useState, memo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Label } from "../ui/label";
+import { FolderOpen, RotateCcw, Lightbulb } from "lucide-react";
 
 interface ProjectSettingsProps {
   isOpen: boolean;
@@ -17,8 +28,6 @@ export const ProjectSettings = memo(function ProjectSettings({
 }: ProjectSettingsProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const handleOpenProject = async () => {
     setLoading(true);
@@ -61,81 +70,72 @@ export const ProjectSettings = memo(function ProjectSettings({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div
-        className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-lg"
-        onKeyDown={handleKeyDown}
-      >
-        <h2 className="text-xl font-semibold mb-4">Project Settings</h2>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Project Settings</DialogTitle>
+          <DialogDescription>
+            Manage your project location and data storage
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Current Project Location
-            </label>
-            <div className="px-3 py-2 bg-gray-900 rounded border border-gray-700 text-sm font-mono text-gray-300">
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Current Project Location</Label>
+            <div className="px-3 py-2.5 bg-muted rounded-md border border-border text-sm font-mono text-muted-foreground">
               {currentPath || "~/.query (default)"}
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-muted-foreground">
               All connections, queries, and history are stored in this directory
             </p>
           </div>
 
           {error && (
-            <div className="p-3 bg-red-900/20 border border-red-700 rounded text-sm text-red-300">
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-sm text-destructive">
               {error}
             </div>
           )}
 
-          <div className="border-t border-gray-700 pt-4">
-            <p className="text-sm text-gray-400 mb-3">Change Project Location:</p>
+          <div className="border-t border-border pt-4 space-y-3">
+            <Label className="text-muted-foreground">Change Project Location</Label>
             <div className="space-y-2">
-              <button
+              <Button
                 onClick={handleOpenProject}
                 disabled={loading}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium disabled:opacity-50 transition"
+                className="w-full justify-start gap-2"
               >
+                <FolderOpen className="h-4 w-4" />
                 {loading ? "Opening..." : "Open Different Project..."}
-              </button>
+              </Button>
               {currentPath && (
-                <button
+                <Button
                   onClick={handleUseDefault}
                   disabled={loading}
-                  className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium disabled:opacity-50 transition"
+                  variant="outline"
+                  className="w-full justify-start gap-2"
                 >
+                  <RotateCcw className="h-4 w-4" />
                   Reset to Default Location
-                </button>
+                </Button>
               )}
             </div>
           </div>
 
-          <div className="bg-blue-900/20 border border-blue-700 rounded p-3">
-            <p className="text-xs text-blue-300">
-              <strong>Tip:</strong> Use different project directories to organize connections by environment (dev, staging, prod) or by client/project.
+          <div className="bg-primary/5 border border-primary/20 rounded-md p-3 flex gap-2">
+            <Lightbulb className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Tip:</span> Use different project directories to organize connections by environment (dev, staging, prod) or by client/project.
             </p>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium transition"
-          >
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
             Close
-          </button>
-        </div>
-
-        <p className="text-xs text-gray-500 mt-4 text-center">
-          Press <kbd className="px-1.5 py-0.5 bg-gray-900 rounded border border-gray-700">Esc</kbd> to close
-        </p>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 });

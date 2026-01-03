@@ -70,34 +70,28 @@ interface AppSidebarProps {
   onTableDelete?: (tableName: string) => void;
 }
 
+// Query type badge styles using semantic tokens
+const queryBadgeStyles = {
+  SELECT: "bg-query-select/20 text-query-select border-query-select/30 hover:bg-query-select/30",
+  INSERT: "bg-query-insert/20 text-query-insert border-query-insert/30 hover:bg-query-insert/30",
+  UPDATE: "bg-query-update/20 text-query-update border-query-update/30 hover:bg-query-update/30",
+  DELETE: "bg-query-delete/20 text-query-delete border-query-delete/30 hover:bg-query-delete/30",
+  DEFAULT: "bg-muted text-muted-foreground border-border hover:bg-muted/80",
+} as const;
+
 // Helper to get query type tag
 function getQueryTag(query: string): { label: string; className: string } {
   const normalizedQuery = query.trim().toUpperCase();
   if (normalizedQuery.startsWith("SELECT")) {
-    return {
-      label: "SEL",
-      className: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    };
+    return { label: "SEL", className: queryBadgeStyles.SELECT };
   } else if (normalizedQuery.startsWith("INSERT")) {
-    return {
-      label: "INS",
-      className: "bg-green-500/20 text-green-400 border-green-500/30",
-    };
+    return { label: "INS", className: queryBadgeStyles.INSERT };
   } else if (normalizedQuery.startsWith("UPDATE")) {
-    return {
-      label: "UPD",
-      className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    };
+    return { label: "UPD", className: queryBadgeStyles.UPDATE };
   } else if (normalizedQuery.startsWith("DELETE")) {
-    return {
-      label: "DEL",
-      className: "bg-red-500/20 text-red-400 border-red-500/30",
-    };
+    return { label: "DEL", className: queryBadgeStyles.DELETE };
   }
-  return {
-    label: "SQL",
-    className: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-  };
+  return { label: "SQL", className: queryBadgeStyles.DEFAULT };
 }
 
 export const AppSidebar = memo(function AppSidebar({
@@ -263,9 +257,9 @@ export const AppSidebar = memo(function AppSidebar({
                                 <CollapsibleContent>
                                   <div className="ml-6 mt-1 space-y-1">
                                     {/* Quick Actions */}
-                                    <div className="flex gap-1 px-2">
+                                    <div className="flex gap-1.5 px-2 py-1">
                                       <Kbd
-                                        className="cursor-pointer hover:bg-blue-500/30 text-[10px] px-1.5 py-0 h-5 bg-blue-500/20 text-blue-400 border border-blue-500/30 pointer-events-auto"
+                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.SELECT}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableClick(table.table_name);
@@ -274,7 +268,7 @@ export const AppSidebar = memo(function AppSidebar({
                                         SEL
                                       </Kbd>
                                       <Kbd
-                                        className="cursor-pointer hover:bg-green-500/30 text-[10px] px-1.5 py-0 h-5 bg-green-500/20 text-green-400 border border-green-500/30 pointer-events-auto"
+                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.INSERT}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableInsert?.(table.table_name);
@@ -283,7 +277,7 @@ export const AppSidebar = memo(function AppSidebar({
                                         INS
                                       </Kbd>
                                       <Kbd
-                                        className="cursor-pointer hover:bg-yellow-500/30 text-[10px] px-1.5 py-0 h-5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 pointer-events-auto"
+                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.UPDATE}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableUpdate?.(table.table_name);
@@ -292,7 +286,7 @@ export const AppSidebar = memo(function AppSidebar({
                                         UPD
                                       </Kbd>
                                       <Kbd
-                                        className="cursor-pointer hover:bg-red-500/30 text-[10px] px-1.5 py-0 h-5 bg-red-500/20 text-red-400 border border-red-500/30 pointer-events-auto"
+                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.DELETE}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableDelete?.(table.table_name);
@@ -610,12 +604,12 @@ export const AppSidebar = memo(function AppSidebar({
         {(gitError || gitSuccess) && (
           <div className="px-3 pb-3">
             {gitError && (
-              <div className="p-2 rounded text-xs bg-destructive/10 border border-destructive text-destructive">
+              <div className="p-2 rounded-md text-xs bg-status-error/10 border border-status-error/30 text-status-error">
                 {gitError}
               </div>
             )}
             {gitSuccess && (
-              <div className="p-2 rounded text-xs bg-green-500/10 border border-green-500/30 text-green-400">
+              <div className="p-2 rounded-md text-xs bg-status-success/10 border border-status-success/30 text-status-success">
                 {gitSuccess}
               </div>
             )}
