@@ -309,7 +309,7 @@ export default function AppNew() {
           onTableDelete={queryExecution.handleTableDelete}
         />
 
-        <SidebarInset className="flex flex-col">
+        <SidebarInset className="flex flex-1 flex-col">
           {/* Header */}
           <header
             data-tauri-drag-region

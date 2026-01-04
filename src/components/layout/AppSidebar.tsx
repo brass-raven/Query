@@ -117,8 +117,6 @@ export const AppSidebar = memo(function AppSidebar({
   const [initializing, setInitializing] = useState(false);
   const [gitError, setGitError] = useState<string | null>(null);
   const [gitSuccess, setGitSuccess] = useState<string | null>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(256); // 16rem = 256px
-  const [isResizing, setIsResizing] = useState(false);
 
   const toggleTable = (tableName: string) => {
     const newExpanded = new Set(expandedTables);
@@ -129,38 +127,6 @@ export const AppSidebar = memo(function AppSidebar({
     }
     setExpandedTables(newExpanded);
   };
-
-  // Handle sidebar resize by updating CSS variable
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      const newWidth = e.clientX;
-      if (newWidth >= 200 && newWidth <= 500) {
-        setSidebarWidth(newWidth);
-        // Update CSS variable so shadcn sidebar respects the width
-        document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
-
-  // Set initial sidebar width CSS variable on mount
-  useEffect(() => {
-    document.documentElement.style.setProperty('--sidebar-width', `${sidebarWidth}px`);
-  }, []);
 
   // Fetch git status on mount and poll every 10 seconds
   useEffect(() => {
@@ -193,8 +159,7 @@ export const AppSidebar = memo(function AppSidebar({
   const unpinnedQueries = savedQueries.filter((q) => !q.is_pinned);
 
   return (
-    <div className="relative flex w-(--sidebar-width)">
-      <Sidebar>
+    <Sidebar>
       <SidebarContent>
         <ScrollArea className={`h-[calc(100vh-${SIDEBAR_FOOTER_HEIGHT}px)]`}>
           <SidebarGroup>
@@ -630,11 +595,5 @@ export const AppSidebar = memo(function AppSidebar({
         }}
       />
     </Sidebar>
-    <div
-      className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/50 transition-colors"
-      onMouseDown={() => setIsResizing(true)}
-      style={{ zIndex: 50 }}
-    />
-    </div>
   );
 });

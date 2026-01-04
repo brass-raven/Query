@@ -46,7 +46,7 @@
       "exceptionDomain": "",
       "frameworks": [],
       "providerShortName": null,
-      "signingIdentity": null,
+      "signingIdentity": "BE29CBF98A87E385A185BCC9F0B5AC309335A0A6",
       "minimumSystemVersion": "12.0"
     },
     "windows": {
